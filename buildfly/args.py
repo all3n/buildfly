@@ -25,9 +25,15 @@ parser.add_argument('action', metavar='action', type=str,
                     default="build",
                     help="actions: \n %s" % (all_actions))
 
-ARGS = parser.parse_args()
+app_args = sys.argv
+if len(app_args) > 1:
+    action = app_args[1]
+else:
+    print("need action")
+    parser.print_help()
+    sys.exit(-1)
 
-def get_action(action):
+def _build_action(action):
     if action not in all_actions:
         print("%s action is not valid" % (action))
         parser.print_help()
@@ -38,4 +44,6 @@ def get_action(action):
     action_obj = action_class()
     return action_obj
 
-ACTION=get_action(ARGS.action)
+ACTION=_build_action(action)
+ACTION.parse_args(parser)
+ACTION.args = parser.parse_args()

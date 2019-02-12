@@ -22,11 +22,11 @@ class github_api(object):
         res = requests.get(api)
         if res.status_code == 200:
             repo_tag_info = json.loads(res.text)
-            t = [{"name":rti["name"], "tarball_url": rti["tarball_url"]} for rti in repo_tag_info]
-            print(t)
+            t = {rti["name"] : {"tarball_url": rti["tarball_url"]} for rti in repo_tag_info}
             return t
         return None
 
+api_client = github_api()
 
 
 

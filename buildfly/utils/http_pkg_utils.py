@@ -33,18 +33,20 @@ def formatSize(bytes):
     else:
         return "%.2fkb" % (kb)
 
-def show_progress(i, content_length):
+def show_progress(i, content_length,fmt="{SPEED}"):
     size_format = formatSize(i)
     if content_length > 0:
         all_size_format = formatSize(content_length)
-        sys.stdout.write("%s/%s\r" % (size_format,all_size_format))
+        speed = "%s/%s" % (size_format,all_size_format)
     else:
-        sys.stdout.write("%-10s\r" % (size_format))
+        speed = "%-10s" % (size_format)
+    log = fmt.replace("{SPEED}", speed)
+    sys.stdout.write(log + "\r")
     sys.stdout.flush()
 
 
 
-def donwload_http_pkg(url,tmp_pkg_file):
+def download_http_pkg(url,tmp_pkg_file):
     pkg_base_dir = os.path.dirname(tmp_pkg_file)
     if not os.path.exists(pkg_base_dir):
         os.makedirs(pkg_base_dir)
@@ -62,7 +64,7 @@ def donwload_http_pkg(url,tmp_pkg_file):
             write_data_size = 0
             for chunk in res.iter_content(100000):
                 write_data_size += len(chunk)
-                show_progress(write_data_size,content_length)
+                show_progress(write_data_size,content_length, fmt = "DOWNLOAD:%s {SPEED}" % (url))
                 tpf.write(chunk)
             print("%s download finished" % (url))
 

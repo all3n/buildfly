@@ -10,5 +10,8 @@
 
 """
 class basic_action(object):
+    args = None
     def run(self):
+        pass
+    def parse_args(self, parser):
         pass
