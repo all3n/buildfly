@@ -1,2 +1,16 @@
 #!/usr/bin/env bash
+if [[ -L $0 ]];then
+    SCRIPT=`readlink $0`
+else
+    SCRIPT=$0
+fi
+bin=`dirname "$SCRIPT"`
+export APP_DIR=`cd "$bin/"; pwd`
+export APP_DIR_PARENT=`cd "$bin/.."; pwd`
+if [[ "$APP_DIR_PARENT" == "$(pwd)" ]];then
+    echo "dont choose $APP_DIR_PARENT as workspace dir,please change another dir"
+    exit
+fi
+
+export PYTHONPATH=$APP_DIR:$PYTHONPATH
 python -m buildfly "$@"

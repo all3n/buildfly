@@ -13,19 +13,19 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
+/build/
 develop-eggs/
-dist/
+/dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
+/lib/
+/lib64/
+/parts/
+/sdist/
+/var/
+/wheels/
+/share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -74,7 +74,7 @@ instance/
 docs/_build/
 
 # PyBuilder
-target/
+/target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -93,13 +93,13 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+/.env
+/.venv
+/env/
+/venv/
+/ENV/
+/env.bak/
+/venv.bak/
 
 # Spyder project settings
 .spyderproject
@@ -119,6 +119,6 @@ dmypy.json
 .pyre/
 
 ### Python Patch ###
-.venv/
+/.venv/
 
 # End of https://www.gitignore.io/api/python
