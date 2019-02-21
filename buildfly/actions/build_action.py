@@ -12,10 +12,16 @@
 import sys
 import os
 import glob
+import json
 from buildfly.actions.basic_action import basic_action
 from buildfly.utils.yaml_conf_utils import yaml_conf_loader
+from buildfly.utils.dep_utils import *
 CONF_NAME="buildfly.yaml"
 class build_action(basic_action):
+    def parse_args(self, parser):
+        parser.add_argument('target', metavar='target', type=str, nargs = "?",
+                    help="build target")
+
     def run(self):
         cur_dir = os.path.abspath(sys.path[0])
         print("run build action in %s" % (cur_dir))
@@ -33,29 +39,40 @@ class build_action(basic_action):
             os.makedirs(self.build_dir)
         self.bins = app_conf.bins
         self.libs = app_conf.libs
-        print(app_conf)
-
 
         self.build_flag = {}
+        target = self.args.target
 
-        for name, build_info in self.bins.items():
-            self.build_bin(name, build_info)
+        if target:
+            if target in self.bins:
+                self.build_bin(target, self.bins[target])
+            if target in self.libs:
+                self.build_library(target, self.libs[target])
 
-        for name, build_info in self.libs.items():
-            if name not in self.build_flag:
-                self.build_library(name, build_info)
+        else:
+            for name, build_info in self.bins.items():
+                self.build_bin(name, build_info)
+
+            for name, build_info in self.libs.items():
+                if name not in self.build_flag:
+                    self.build_library(name, build_info)
 
     def build_dep(self, name, build_info):
         if 'deps' not in build_info:
             return
-        print(name, build_info)
+        print(name, json.dumps(build_info, indent=2))
         deps = build_info['deps']
         for dep in deps:
             if dep not in self.build_flag:
-                if self.build_library(dep, self.libs[dep]):
-                    self.build_flag[dep] = True
+                if dep.startswith("//"):
+                    dep = dep[2:]
+                    if self.build_library(dep, self.libs[dep]):
+                        self.build_flag[dep] = True
+                    else:
+                        raise Exception("build dep library:%s fail" % (dep))
                 else:
-                    raise Exception("build dep library:%s fail" % (dep))
+                    print("dep:%s" % dep)
+                    get_dep(dep)
 
     def expand_pattern(self, pattern):
         return glob.glob(pattern, recursive = True)
@@ -68,29 +85,37 @@ class build_action(basic_action):
         self.build_dep(name, build_info)
         cmds = []
         srcs = build_info['srcs']
+        libs = build_info['libs']
         includes = build_info['includes'] if 'includes' in build_info else []
         target = name
         library_path = []
         link_library = []
         static_libs = []
+        dep_options = []
         if "deps" in build_info:
             deps = build_info['deps']
             for dep in deps:
-                lib_build_dir = os.path.join(self.build_dir, "build-lib-%s" % dep)
-                dep_lib_info = self.libs[dep]
-                lib_include_dir = dep_lib_info['includes']
-                lib_type = dep_lib_info.get('lib_type', 'shared')
-                includes += lib_include_dir
-                if lib_type == 'shared':
-                    library_path.append(lib_build_dir)
-                    link_library.append(dep)
+                if dep.startswith("//"):
+                    dep = dep[2:]
+                    lib_build_dir = os.path.join(self.build_dir, "build-lib-%s" % dep)
+                    dep_lib_info = self.libs[dep]
+                    lib_include_dir = dep_lib_info['includes']
+                    lib_type = dep_lib_info.get('lib_type', 'shared')
+                    includes += lib_include_dir
+                    if lib_type == 'shared':
+                        library_path.append(lib_build_dir)
+                        link_library.append(dep)
+                    else:
+                        static_libs.append(os.path.join(lib_build_dir, "lib%s.a" % (dep)))
                 else:
-                    static_libs.append(os.path.join(lib_build_dir, "lib%s.a" % (dep)))
+                    dep_options.append(get_dep_compile_options(dep))
 
+        link_library += libs
         include_options = " ".join(["-I%s" % i for i in includes])
         library_path_options = " ".join(["-L%s" % i for i in library_path])
         link_lib_options = " ".join(["-l%s" % i for i in link_library])
         static_lib_option=" ".join(static_libs)
+        dep_extra_lib_option=" ".join(dep_options)
 
         srcs_files = []
         for src in srcs:
@@ -98,7 +123,7 @@ class build_action(basic_action):
         srcs_options = " ".join(srcs_files)
         cflags_options = build_info.get('cflags', '')
 
-        cmds.append("g++ {cflags} {library_path_options} {link_lib_options} {include_options} -o {build_dir}/{target} {srcs} {static_lib_option}".format(
+        cmds.append("g++ {cflags} {dep_extra_lib_option} {library_path_options} {link_lib_options} {include_options} -o {build_dir}/{target} {srcs} {static_lib_option}".format(
             target = target,
             srcs = srcs_options,
             library_path_options = library_path_options,
@@ -106,7 +131,8 @@ class build_action(basic_action):
             build_dir = bin_dir,
             cflags = cflags_options,
             link_lib_options=link_lib_options,
-            static_lib_option=static_lib_option
+            static_lib_option=static_lib_option,
+            dep_extra_lib_option = dep_extra_lib_option
         ))
 
         for cmd in cmds:

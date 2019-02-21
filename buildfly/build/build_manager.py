@@ -16,13 +16,12 @@ class build_manager(object):
     def __init__(self):
         pass
 
-    def build(self, code_dir, repo_desc):
+    def build(self, code_dir, install_dir):
         build_type = self.detact_build_type(code_dir)
         build_class = build_type + "_build"
         build_module = importlib.import_module("buildfly.build." + build_class)
         build_obj = getattr(build_module, build_class)
-        install_dir_path = os.path.expanduser("~/.buildfly/install/%s/%s/%s/%s" % repo_desc)
-        build_obj.build(code_dir, install_dir_path)
+        build_obj.build(code_dir, install_dir)
 
 
 

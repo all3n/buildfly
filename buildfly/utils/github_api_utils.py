@@ -26,6 +26,25 @@ class github_api(object):
             return t
         return None
 
+    def get_branch_info(self, owner, repo, branch):
+        api = "%s/repos/%s/%s/branches/%s" % (GITHUB_API_V3, owner, repo, branch)
+        print(api)
+        res = requests.get(api)
+        if res.status_code == 200:
+            repo_branch_info = json.loads(res.text)
+            return repo_branch_info
+        else:
+            return None
+    def is_repo_exists(self, owner, repo):
+        api = "%s/repos/%s/%s" % (GITHUB_API_V3, owner, repo)
+        res = requests.get(api)
+        if res.status_code == 200:
+            repo_info = json.loads(res.text)
+            return "id" in repo_info
+        else:
+            return False
+
+
 api_client = github_api()
 
 
