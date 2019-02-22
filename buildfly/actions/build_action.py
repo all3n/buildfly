@@ -13,10 +13,16 @@ import sys
 import os
 import glob
 import json
+import re
 from buildfly.actions.basic_action import basic_action
 from buildfly.utils.yaml_conf_utils import yaml_conf_loader
 from buildfly.utils.dep_utils import *
+from buildfly.utils.system_utils import *
+
 CONF_NAME="buildfly.yaml"
+COMPILER_PATTERN = re.compile("(\w+)([<=>]{1,2})?([\d\.\w]+)?")
+
+
 class build_action(basic_action):
     def parse_args(self, parser):
         parser.add_argument('target', metavar='target', type=str, nargs = "?",
@@ -26,6 +32,8 @@ class build_action(basic_action):
         cur_dir = os.path.abspath(sys.path[0])
         print("run build action in %s" % (cur_dir))
         self.parse_build_conf(os.path.join(cur_dir, CONF_NAME))
+        self.check_compiler(self.compiler_info)
+        self.start_build()
 
     def parse_build_conf(self, conf_file):
         if not os.path.exists(conf_file):
@@ -33,13 +41,62 @@ class build_action(basic_action):
             sys.exit(-1)
 
         app_conf = yaml_conf_loader(conf_file)
+        print(app_conf)
+        self.app_conf = app_conf
 
         self.build_dir = app_conf.args.get('build_dir', 'build')
         if not os.path.exists(self.build_dir):
             os.makedirs(self.build_dir)
+
         self.bins = app_conf.bins
         self.libs = app_conf.libs
 
+
+        compiler = app_conf.args.get('compiler', 'cmake').replace(" ","")
+        self.compiler_info = COMPILER_PATTERN.match(compiler).groups()
+
+    def check_compiler(self, compiler_info):
+        print(compiler_info)
+        # check local
+        compiler_name,version_op, version = compiler_info
+        version_match = False
+        if compiler_name == "cmake":
+            if check_command_exists(compiler_name):
+                verson_str = exec_cmd("cmake --version")
+                version_res = re.search("version ([\d\.]+)", verson_str)
+                if version_res:
+                    compiler_version = version_res.group(1)
+                    print("compiler:system:%s:%s" % (compiler_name, compiler_version))
+                    if version_op and version:
+                        if (version_op == "=" or version_op == "==") and version == compiler_version:
+                            version_match = True
+                        elif version_op == ">":
+                            if compiler_version > version:
+                                version_match = True
+                        elif version_op == ">=":
+                            if compiler_version >= version:
+                                version_match = True
+                        elif version_op == "<":
+                            if compiler_version < version:
+                                version_match = True
+                        elif version_op == "<=":
+                            if compiler_version <= version:
+                                version_match = True
+        if version_match:
+            print("compiler: version ok")
+        else:
+            print("compiler: version not match %s%s%s" % compiler_info)
+
+
+
+
+
+
+
+
+
+
+    def start_build(self):
         self.build_flag = {}
         target = self.args.target
 
@@ -57,13 +114,24 @@ class build_action(basic_action):
                 if name not in self.build_flag:
                     self.build_library(name, build_info)
 
+    def get_dep_raw(dep_key):
+        dep_name = dep.split(":")[0]
+
+        if dep_name in self.app_conf.dependency:
+            return self.app_conf.dependency[dep_name]
+        else:
+            print("%s not defined" % dep_name)
+            sys.exit(-1)
+
     def build_dep(self, name, build_info):
         if 'deps' not in build_info:
             return
+
         print(name, json.dumps(build_info, indent=2))
         deps = build_info['deps']
         for dep in deps:
-            if dep not in self.build_flag:
+            dep_name = self.get_dep_raw(dep)
+            if dep_name not in self.build_flag:
                 if dep.startswith("//"):
                     dep = dep[2:]
                     if self.build_library(dep, self.libs[dep]):
