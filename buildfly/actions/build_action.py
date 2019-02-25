@@ -103,7 +103,7 @@ class build_action(basic_action):
         if target:
             if target in self.bins:
                 self.build_bin(target, self.bins[target])
-            if target in self.libs:
+            elif target in self.libs:
                 self.build_library(target, self.libs[target])
 
         else:
@@ -126,21 +126,22 @@ class build_action(basic_action):
     def build_dep(self, name, build_info):
         if 'deps' not in build_info:
             return
-
-        print(name, json.dumps(build_info, indent=2))
         deps = build_info['deps']
-        for dep in deps:
-            dep_name = self.get_dep_raw(dep)
-            if dep_name not in self.build_flag:
-                if dep.startswith("//"):
-                    dep = dep[2:]
-                    if self.build_library(dep, self.libs[dep]):
-                        self.build_flag[dep] = True
+        print(deps)
+        for dep_name, dep_libs in deps.items():
+            for dep_lib in dep_libs:
+                print("%s:%s" %  (dep_name, dep_lib))
+                if dep_lib.name not in self.build_flag:
+                    print(dep_lib)
+                    if dep_lib.libdesc.startswith("//"):
+                        if self.build_library(dep_lib.name, self.libs[dep_lib.name]):
+                            self.build_flag[dep_lib.name] = True
+                        else:
+                            raise Exception("build dep library:%s fail" % (dep_lib))
                     else:
-                        raise Exception("build dep library:%s fail" % (dep))
-                else:
-                    print("dep:%s" % dep)
-                    get_dep(dep)
+                        libdesc = self.app_conf.dependency[dep_lib.name]
+                        print("dep_lib:" , dep_lib, libdesc)
+                        get_dep(libdesc)
 
     def expand_pattern(self, pattern):
         return glob.glob(pattern, recursive = True)
@@ -162,21 +163,23 @@ class build_action(basic_action):
         dep_options = []
         if "deps" in build_info:
             deps = build_info['deps']
-            for dep in deps:
-                if dep.startswith("//"):
-                    dep = dep[2:]
-                    lib_build_dir = os.path.join(self.build_dir, "build-lib-%s" % dep)
-                    dep_lib_info = self.libs[dep]
-                    lib_include_dir = dep_lib_info['includes']
-                    lib_type = dep_lib_info.get('lib_type', 'shared')
-                    includes += lib_include_dir
-                    if lib_type == 'shared':
-                        library_path.append(lib_build_dir)
-                        link_library.append(dep)
+            for dep_name, dep_libs in deps.items():
+                for dep_lib in dep_libs:
+                    if dep_lib.libdesc.startswith("//"):
+                        dep = dep[2:]
+                        lib_build_dir = os.path.join(self.build_dir, "build-lib-%s" % dep)
+                        dep_lib_info = self.libs[dep]
+                        lib_include_dir = dep_lib_info['includes']
+                        lib_type = dep_lib_info.get('lib_type', 'shared')
+                        includes += lib_include_dir
+                        if lib_type == 'shared':
+                            library_path.append(lib_build_dir)
+                            link_library.append(dep)
+                        else:
+                            static_libs.append(os.path.join(lib_build_dir, "lib%s.a" % (dep)))
                     else:
-                        static_libs.append(os.path.join(lib_build_dir, "lib%s.a" % (dep)))
-                else:
-                    dep_options.append(get_dep_compile_options(dep))
+                        dep_options.append(get_dep_compile_options(
+                            self.app_conf.dependency[dep_name] , dep_libs))
 
         link_library += libs
         include_options = " ".join(["-I%s" % i for i in includes])

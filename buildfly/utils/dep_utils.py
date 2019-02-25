@@ -40,6 +40,7 @@ def get_blfy_install_dir(lib_info):
 
 
 def get_dep(libdesc):
+    print("libdesc1:", libdesc)
     lib_info = detact_lib_type(libdesc)
     if lib_info:
         install_dir = get_blfy_install_dir(lib_info)
@@ -68,6 +69,7 @@ def get_dep(libdesc):
 
 
 def detact_lib_type(libdesc):
+    print("libdesc2:", libdesc)
     # github.com
     lib_info = {}
     if ":" not in libdesc and "/" in libdesc:
@@ -143,11 +145,11 @@ def git_clone_lib_src(lib_info, repo_dir_path):
 
 
 
-def get_dep_compile_options(libdesc):
+def get_dep_compile_options(libdesc, dep_lib):
     lib_info = detact_lib_type(libdesc)
     install_lib_dir = get_blfy_install_dir(lib_info)
     dirs = os.listdir(install_lib_dir)
-    libname = ""
+    libname = dep_lib.lib_name
     compile_options = []
     for d in dirs:
         abs_dir = os.path.join(install_lib_dir, d)
