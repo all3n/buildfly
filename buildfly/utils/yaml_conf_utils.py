@@ -116,5 +116,5 @@ class BuildConf(object):
 def yaml_conf_loader(yaml_file):
     with open(yaml_file, "r", encoding='utf-8') as yf:
         conf =  yaml.load(yf.read())
-        import json; print(json.dumps(conf, indent = 2))
+        # import json; print(json.dumps(conf, indent = 2))
         return BuildConf(conf)

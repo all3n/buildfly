@@ -40,7 +40,6 @@ def get_blfy_install_dir(lib_info):
 
 
 def get_dep(libdesc):
-    print("libdesc1:", libdesc)
     lib_info = detact_lib_type(libdesc)
     if lib_info:
         install_dir = get_blfy_install_dir(lib_info)
@@ -69,7 +68,6 @@ def get_dep(libdesc):
 
 
 def detact_lib_type(libdesc):
-    print("libdesc2:", libdesc)
     # github.com
     lib_info = {}
     if ":" not in libdesc and "/" in libdesc:
@@ -145,24 +143,24 @@ def git_clone_lib_src(lib_info, repo_dir_path):
 
 
 
-def get_dep_compile_options(libdesc, dep_lib):
+def get_dep_compile_options(libdesc, dep_libs):
     lib_info = detact_lib_type(libdesc)
     install_lib_dir = get_blfy_install_dir(lib_info)
     dirs = os.listdir(install_lib_dir)
-    libname = dep_lib.lib_name
     compile_options = []
     for d in dirs:
         abs_dir = os.path.join(install_lib_dir, d)
         if d == "lib" or d == "lib64":
             pkgconfig_dir = os.path.join(install_lib_dir, "lib", "pkgconfig")
-            if False and os.path.exists(pkgconfig_dir):
+            lib_names = [l.lib_name for l in dep_libs]
+            if os.path.exists(pkgconfig_dir):
                 # if pkgconfig exists,use pkgconfig cflags
-                cmd = "PKG_CONFIG_PATH=%s:$PKG_CONFIG_PATH pkg-config --libs --cflags %s" % (pkgconfig_dir,libname)
+                cmd = "PKG_CONFIG_PATH=%s:$PKG_CONFIG_PATH pkg-config --libs --cflags %s" % (pkgconfig_dir," ".join(lib_names))
                 pkgconfig_cflags = os.popen(cmd).read().rstrip()
                 return pkgconfig_cflags
             else:
                 compile_options.append("-L%s" % abs_dir)
-                # compile_options.append("-l%s" % libname)
+                compile_options.append(" ".join(["-l%s" % ln for ln in lib_names]))
         elif d == "include":
             compile_options.append("-I%s" % abs_dir)
     return " ".join(compile_options)

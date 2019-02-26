@@ -14,9 +14,12 @@ import os
 import glob
 import json
 import re
+import logging
+
 from buildfly.actions.basic_action import basic_action
 from buildfly.utils.yaml_conf_utils import yaml_conf_loader
 from buildfly.utils.dep_utils import *
+from buildfly.utils.color_utils import *
 from buildfly.utils.system_utils import *
 
 CONF_NAME="buildfly.yaml"
@@ -30,7 +33,7 @@ class build_action(basic_action):
 
     def run(self):
         cur_dir = os.path.abspath(sys.path[0])
-        print("run build action in %s" % (cur_dir))
+        # print("run build action in %s" % (cur_dir))
         self.parse_build_conf(os.path.join(cur_dir, CONF_NAME))
         self.check_compiler(self.compiler_info)
         self.start_build()
@@ -41,7 +44,7 @@ class build_action(basic_action):
             sys.exit(-1)
 
         app_conf = yaml_conf_loader(conf_file)
-        print(app_conf)
+        # print(app_conf)
         self.app_conf = app_conf
 
         self.build_dir = app_conf.args.get('build_dir', 'build')
@@ -56,7 +59,7 @@ class build_action(basic_action):
         self.compiler_info = COMPILER_PATTERN.match(compiler).groups()
 
     def check_compiler(self, compiler_info):
-        print(compiler_info)
+        logging.info(green("check compiler info ") + str(compiler_info))
         # check local
         compiler_name,version_op, version = compiler_info
         version_match = False
@@ -66,7 +69,7 @@ class build_action(basic_action):
                 version_res = re.search("version ([\d\.]+)", verson_str)
                 if version_res:
                     compiler_version = version_res.group(1)
-                    print("compiler:system:%s:%s" % (compiler_name, compiler_version))
+                    # print("compiler:system:%s:%s" % (compiler_name, compiler_version))
                     if version_op and version:
                         if (version_op == "=" or version_op == "==") and version == compiler_version:
                             version_match = True
@@ -83,9 +86,9 @@ class build_action(basic_action):
                             if compiler_version <= version:
                                 version_match = True
         if version_match:
-            print("compiler: version ok")
+            logging.info(green("compiler: version ok"))
         else:
-            print("compiler: version not match %s%s%s" % compiler_info)
+            logging.error(red("compiler: version not match %s%s%s" % compiler_info))
 
 
 
@@ -120,19 +123,19 @@ class build_action(basic_action):
         if dep_name in self.app_conf.dependency:
             return self.app_conf.dependency[dep_name]
         else:
-            print("%s not defined" % dep_name)
+            logging.error(red("%s not defined" % dep_name))
             sys.exit(-1)
 
     def build_dep(self, name, build_info):
         if 'deps' not in build_info:
             return
         deps = build_info['deps']
-        print(deps)
+        # print(deps)
         for dep_name, dep_libs in deps.items():
             for dep_lib in dep_libs:
-                print("%s:%s" %  (dep_name, dep_lib))
+                # print("%s:%s" %  (dep_name, dep_lib))
                 if dep_lib.name not in self.build_flag:
-                    print(dep_lib)
+                    # print(dep_lib)
                     if dep_lib.libdesc.startswith("//"):
                         if self.build_library(dep_lib.name, self.libs[dep_lib.name]):
                             self.build_flag[dep_lib.name] = True
@@ -140,7 +143,7 @@ class build_action(basic_action):
                             raise Exception("build dep library:%s fail" % (dep_lib))
                     else:
                         libdesc = self.app_conf.dependency[dep_lib.name]
-                        print("dep_lib:" , dep_lib, libdesc)
+                        # print("dep_lib:" , dep_lib, libdesc)
                         get_dep(libdesc)
 
     def expand_pattern(self, pattern):
@@ -166,7 +169,7 @@ class build_action(basic_action):
             for dep_name, dep_libs in deps.items():
                 for dep_lib in dep_libs:
                     if dep_lib.libdesc.startswith("//"):
-                        dep = dep[2:]
+                        dep = dep_lib.name
                         lib_build_dir = os.path.join(self.build_dir, "build-lib-%s" % dep)
                         dep_lib_info = self.libs[dep]
                         lib_include_dir = dep_lib_info['includes']
@@ -194,7 +197,9 @@ class build_action(basic_action):
         srcs_options = " ".join(srcs_files)
         cflags_options = build_info.get('cflags', '')
 
-        cmds.append("g++ {cflags} {dep_extra_lib_option} {library_path_options} {link_lib_options} {include_options} -o {build_dir}/{target} {srcs} {static_lib_option}".format(
+        cmds.append("g++ {cflags} {library_path_options} {link_lib_options} \
+                {include_options} -o {build_dir}/{target} {srcs} \
+                {dep_extra_lib_option} {static_lib_option}".format(
             target = target,
             srcs = srcs_options,
             library_path_options = library_path_options,
@@ -207,7 +212,7 @@ class build_action(basic_action):
         ))
 
         for cmd in cmds:
-            print(cmd)
+            logging.info(cyan(cmd))
             os.system(cmd)
         return True
 
@@ -261,7 +266,7 @@ class build_action(basic_action):
                 ))
 
         for cmd in cmds:
-            print(cmd)
+            logging.info(cyan(cmd))
             os.system(cmd)
 
         return True
