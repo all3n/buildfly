@@ -14,7 +14,7 @@ import os
 from buildfly.build.basic_build import basic_build
 
 class cmake_build(basic_build):
-    def build(code_dir, install_dir_path):
+    def build(self, app_dep, code_dir, install_dir_path):
         print("cmake %s" % code_dir)
         CMD="cd %s;mkdir build; cd build; cmake -D CMAKE_INSTALL_PREFIX=%s ..; make; make install" % (code_dir, install_dir_path)
         print(CMD)

@@ -22,13 +22,12 @@ class github_api(object):
         res = requests.get(api)
         if res.status_code == 200:
             repo_tag_info = json.loads(res.text)
-            t = {rti["name"] : {"tarball_url": rti["tarball_url"]} for rti in repo_tag_info}
+            t = {rti["name"] : rti for rti in repo_tag_info}
             return t
         return None
 
     def get_branch_info(self, owner, repo, branch):
         api = "%s/repos/%s/%s/branches/%s" % (GITHUB_API_V3, owner, repo, branch)
-        print(api)
         res = requests.get(api)
         if res.status_code == 200:
             repo_branch_info = json.loads(res.text)

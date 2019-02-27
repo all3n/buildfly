@@ -10,5 +10,5 @@
 
 """
 class basic_build(object):
-    def build(self, code_dir):
+    def build(self, app_dep, code_dir, install_dir_path):
         pass

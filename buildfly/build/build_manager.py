@@ -16,12 +16,18 @@ class build_manager(object):
     def __init__(self):
         pass
 
-    def build(self, code_dir, install_dir):
-        build_type = self.detact_build_type(code_dir)
+    def build(self,app_dep):
+        code_dir = app_dep.get_code_dir()
+        install_dir = app_dep.get_install_dir()
+        cmds = app_dep.cmds
+        if cmds:
+            build_type = 'custom'
+        else:
+            build_type = self.detact_build_type(code_dir)
         build_class = build_type + "_build"
         build_module = importlib.import_module("buildfly.build." + build_class)
-        build_obj = getattr(build_module, build_class)
-        build_obj.build(code_dir, install_dir)
+        build_obj = getattr(build_module, build_class)()
+        build_obj.build(app_dep, code_dir, install_dir)
 
 
 

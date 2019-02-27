@@ -15,6 +15,7 @@ import glob
 import json
 import re
 import logging
+import stat
 
 from buildfly.actions.basic_action import basic_action
 from buildfly.utils.yaml_conf_utils import yaml_conf_loader
@@ -117,14 +118,6 @@ class build_action(basic_action):
                 if name not in self.build_flag:
                     self.build_library(name, build_info)
 
-    def get_dep_raw(dep_key):
-        dep_name = dep.split(":")[0]
-
-        if dep_name in self.app_conf.dependency:
-            return self.app_conf.dependency[dep_name]
-        else:
-            logging.error(red("%s not defined" % dep_name))
-            sys.exit(-1)
 
     def build_dep(self, name, build_info):
         if 'deps' not in build_info:
@@ -142,13 +135,21 @@ class build_action(basic_action):
                         else:
                             raise Exception("build dep library:%s fail" % (dep_lib))
                     else:
-                        libdesc = self.app_conf.dependency[dep_lib.name]
-                        # print("dep_lib:" , dep_lib, libdesc)
-                        get_dep(libdesc)
+                        app_dep = self.app_conf.dependency[dep_lib.name]
+                        get_dep(app_dep)
 
     def expand_pattern(self, pattern):
         return glob.glob(pattern, recursive = True)
 
+
+    def process_dep_options(self, coption, dep_libs):
+        dep_options = []
+        dep_options.append(coption.cflags)
+        dep_options.append(coption.libs_path_option)
+        dep_options.append(coption.libs)
+        if coption.libs_other:
+            dep_options.append(coption.libs_other)
+        return dep_options
 
     def build_bin(self, name, build_info):
         bin_dir = os.path.join(self.build_dir, "build-bin-%s" % name)
@@ -157,13 +158,15 @@ class build_action(basic_action):
         self.build_dep(name, build_info)
         cmds = []
         srcs = build_info['srcs']
-        libs = build_info['libs']
+        libs = build_info.get('libs', [])
         includes = build_info['includes'] if 'includes' in build_info else []
         target = name
         library_path = []
         link_library = []
         static_libs = []
         dep_options = []
+
+        dep_all_lib_dirs = []
         if "deps" in build_info:
             deps = build_info['deps']
             for dep_name, dep_libs in deps.items():
@@ -181,8 +184,10 @@ class build_action(basic_action):
                         else:
                             static_libs.append(os.path.join(lib_build_dir, "lib%s.a" % (dep)))
                     else:
-                        dep_options.append(get_dep_compile_options(
-                            self.app_conf.dependency[dep_name] , dep_libs))
+                        app_dep = self.app_conf.dependency[dep_name]
+                        coption = get_dep_compile_options(app_dep , dep_libs)
+                        dep_options += self.process_dep_options(coption, dep_libs)
+                        dep_all_lib_dirs += coption.libs_path
 
         link_library += libs
         include_options = " ".join(["-I%s" % i for i in includes])
@@ -214,6 +219,22 @@ class build_action(basic_action):
         for cmd in cmds:
             logging.info(cyan(cmd))
             os.system(cmd)
+
+        # create run.sh for test bin
+        run_bin_script = os.path.join(bin_dir, "run.sh")
+        with open(run_bin_script, "w") as rf:
+            rf.write("#!/usr/bin/env bash\n")
+            rf.write("bin=`dirname \"$0\"`\n")
+            rf.write("export APP_DIR=`cd \"$bin/\"; pwd`\n")
+
+            rf.write("# set library path\n")
+            rf.write("export LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH\n" % (":".join(dep_all_lib_dirs)))
+            rf.write("# run %s\n" % target)
+            rf.write("$APP_DIR/%s $@\n" % (target))
+        os.chmod(run_bin_script, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
+
+
+
         return True
 
     def build_library(self, name, build_info):
