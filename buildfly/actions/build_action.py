@@ -189,6 +189,7 @@ class build_action(basic_action):
         dep_all_lib_dirs = []
         if "deps" in build_info:
             deps = build_info['deps']
+            print("deps:%s" % deps)
             for dep_name, dep_libs in deps.items():
                 for dep_lib in dep_libs:
                     if dep_lib.libdesc.startswith("//"):
@@ -238,7 +239,10 @@ class build_action(basic_action):
 
         for cmd in cmds:
             logging.info(cyan(cmd))
-            os.system(cmd)
+            status_code = os.system(cmd)
+            if status_code != 0:
+                logging.info("%s exec fail:%d" % (red(cmd), status_code))
+                sys.exit(status_code)
 
         # create run.sh for test bin
         run_bin_script = os.path.join(bin_dir, "run.sh")

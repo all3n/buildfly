@@ -142,6 +142,7 @@ class BuildConf(object):
 
 
     def __init__(self, yaml_conf):
+        print(yaml_conf)
         for k,v in yaml_conf.items():
             if type(v) == dict and 'type' in v:
                 if v['type'] == 'bin':

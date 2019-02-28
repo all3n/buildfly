@@ -20,6 +20,6 @@ def check_command_exists(cmd):
 def exec_cmd(cmd):
     data = None
     with os.popen(cmd) as f:
-        data = f.read()
+        data = f.read().strip()
     return data
 

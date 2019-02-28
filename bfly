@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 if [[ -L $0 ]];then
-    SCRIPT=`readlink -f $0`
+    if [[ $OSTYPE == darwin* ]]; then
+        SCRIPT=`python -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' $0`
+    else
+        SCRIPT=`readlink -f $0`
+    fi
 else
     SCRIPT=$0
 fi

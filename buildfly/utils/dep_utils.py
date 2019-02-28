@@ -167,19 +167,19 @@ def get_dep_compile_options(app_dep, dep_libs):
                 for dep_lib in dep_libs:
                     lib_names = [dep_lib.lib_name]
                     # if pkgconfig exists,use pkgconfig cflags
-                    pkg_prefix="PKG_CONFIG_PATH=%s:$PKG_CONFIG_PATH pkg-config"
-                    cmd = "%s --cflags %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
+                    pkg_prefix="PKG_CONFIG_PATH=%s:$PKG_CONFIG_PATH pkg-config" % pkgconfig_dir
+                    cmd = "%s --cflags %s" % (pkg_prefix," ".join(lib_names))
                     pkgconfig_cflags = exec_cmd(cmd)
                     cflags.append(pkgconfig_cflags)
 
-                    cmd = "%s --libs-only-L %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
+                    cmd = "%s --libs-only-L %s" % (pkg_prefix, " ".join(lib_names))
                     pkgconfig_libs_L_path_option = exec_cmd(cmd)
                     pkgconfig_libs_L_path = pkgconfig_libs_L_path_option.replace("-L","").split(" ")
                     lib_dirs += pkgconfig_libs_L_path
                     if dep_lib.link_type == 'shared':
                         share_dir_set = share_dir_set.union(pkgconfig_libs_L_path)
 
-                    cmd = "%s --libs-only-l %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
+                    cmd = "%s --libs-only-l %s" % (pkg_prefix, " ".join(lib_names))
                     pkgconfig_libs_l = exec_cmd(cmd)
                     libs_option.append(pkgconfig_libs_l)
 
@@ -187,7 +187,7 @@ def get_dep_compile_options(app_dep, dep_libs):
                     libs += pkgconfig_libs_name
 
 
-                    cmd = "%s --libs-only-other %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
+                    cmd = "%s --libs-only-other %s" % (pkg_prefix, " ".join(lib_names))
                     pkgconfig_libs_other = exec_cmd(cmd)
                     other_options.append(pkgconfig_libs_other)
 
