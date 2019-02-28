@@ -15,6 +15,7 @@ from buildfly.utils.dep_utils import *
 from six.moves.urllib_parse import urlparse
 import hashlib
 import sys
+import os
 TargetDep = namedtuple('TargetDep', ['name', 'libdesc', 'link_type', 'lib_name'])
 
 
@@ -23,6 +24,7 @@ class BuildTarget(object):
 
 class BuildDependency(object):
     cmds = []
+    modules = []
     lib_info = None
     dep_type = None
     _cache_dir = None
@@ -43,6 +45,34 @@ class BuildDependency(object):
             if 'cmds' in dep_obj and type(dep_obj['cmds']) == list and \
                     len(dep_obj['cmds']) > 0:
                 self.cmds = dep_obj['cmds']
+            if 'modules' in dep_obj:
+                self.modules = dep_obj['modules']
+    def save_modules(self):
+        with open(self.get_install_modules_file(), "w") as mf:
+            mf.write(",".join(self.modules))
+
+    def is_modules_change(self):
+        if self.modules:
+            install_modules = set(self.get_install_modules())
+            for m in self.modules:
+                if m not in install_modules:
+                    return True
+            return False
+        else:
+            return False
+
+
+    def get_install_modules(self):
+        install_modules_file = self.get_install_modules_file()
+        if os.path.exists(install_modules_file):
+            with open(install_modules_file, "r") as mf:
+                return mf.readline().strip().split(",")
+        else:
+            return []
+
+    def get_install_modules_file(self):
+        return os.path.join(self.get_install_dir(),"buildfly.modules")
+
     def get_bfly_dir(self, d):
         return os.path.expanduser("~/.buildfly/%s" % d)
 
@@ -60,9 +90,9 @@ class BuildDependency(object):
             urlparse_res = urlparse(self.url)
             url_host = urlparse_res.netloc
             url_md5 = hashlib.md5(self.url.encode('utf-8')).hexdigest()
-            out_dir = self.get_bfly_dir("{category}/{url_host}/{url_md5}".format(
+            out_dir = self.get_bfly_dir("{category}/{name}/{url_md5}".format(
                 category = category,
-                url_host = url_host,
+                name = self.name,
                 url_md5 = url_md5
             ))
         else:

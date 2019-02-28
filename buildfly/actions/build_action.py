@@ -16,6 +16,7 @@ import json
 import re
 import logging
 import stat
+import re
 
 from buildfly.actions.basic_action import basic_action
 from buildfly.utils.yaml_conf_utils import yaml_conf_loader
@@ -25,6 +26,7 @@ from buildfly.utils.system_utils import *
 
 CONF_NAME="buildfly.yaml"
 COMPILER_PATTERN = re.compile("(\w+)([<=>]{1,2})?([\d\.\w]+)?")
+LIBC_VERSION_PATTERN = re.compile("libc-([\d\.]+)\.so")
 
 
 class build_action(basic_action):
@@ -37,6 +39,7 @@ class build_action(basic_action):
         # print("run build action in %s" % (cur_dir))
         self.parse_build_conf(os.path.join(cur_dir, CONF_NAME))
         self.check_compiler(self.compiler_info)
+        # self.check_glibc()
         self.start_build()
 
     def parse_build_conf(self, conf_file):
@@ -58,6 +61,23 @@ class build_action(basic_action):
 
         compiler = app_conf.args.get('compiler', 'cmake').replace(" ","")
         self.compiler_info = COMPILER_PATTERN.match(compiler).groups()
+
+    def check_glibc(self):
+        libc_so_file = exec_cmd("readlink -f `ldconfig -p|grep libc.so.6|head -n 1|awk -F\"=> \" '{print $2}'`")
+        version_match = LIBC_VERSION_PATTERN.search(libc_so_file)
+        if version_match:
+            libc_version = version_match.group(1)
+            logging.info("libc version:%s" % libc_version)
+        required_libc = str(self.app_conf.args.get("glibc", ""))
+        logging.info("requried glibc:%s" % required_libc)
+        if libc_version and required_libc:
+            if required_libc == libc_version:
+                logging.info("libc version must==%s,system is %s" % (required_libc, libc_version))
+                sys.exit(-2)
+            else:
+                get_glibc(required_libc)
+
+
 
     def check_compiler(self, compiler_info):
         logging.info(green("check compiler info ") + str(compiler_info))
@@ -146,7 +166,7 @@ class build_action(basic_action):
         dep_options = []
         dep_options.append(coption.cflags)
         dep_options.append(coption.libs_path_option)
-        dep_options.append(coption.libs)
+        dep_options.append(coption.libs_option)
         if coption.libs_other:
             dep_options.append(coption.libs_other)
         return dep_options
@@ -187,7 +207,7 @@ class build_action(basic_action):
                         app_dep = self.app_conf.dependency[dep_name]
                         coption = get_dep_compile_options(app_dep , dep_libs)
                         dep_options += self.process_dep_options(coption, dep_libs)
-                        dep_all_lib_dirs += coption.libs_path
+                        dep_all_lib_dirs += coption.share_libs_path
 
         link_library += libs
         include_options = " ".join(["-I%s" % i for i in includes])
@@ -203,8 +223,8 @@ class build_action(basic_action):
         cflags_options = build_info.get('cflags', '')
 
         cmds.append("g++ {cflags} {library_path_options} {link_lib_options} \
-                {include_options} -o {build_dir}/{target} {srcs} \
-                {dep_extra_lib_option} {static_lib_option}".format(
+{include_options} -o {build_dir}/{target} {srcs} \
+{dep_extra_lib_option} {static_lib_option}".format(
             target = target,
             srcs = srcs_options,
             library_path_options = library_path_options,
@@ -227,11 +247,13 @@ class build_action(basic_action):
             rf.write("bin=`dirname \"$0\"`\n")
             rf.write("export APP_DIR=`cd \"$bin/\"; pwd`\n")
 
-            rf.write("# set library path\n")
-            rf.write("export LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH\n" % (":".join(dep_all_lib_dirs)))
+            if dep_all_lib_dirs:
+                rf.write("# set library path\n")
+                rf.write("export LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH\n" % (":".join(dep_all_lib_dirs)))
             rf.write("# run %s\n" % target)
             rf.write("$APP_DIR/%s $@\n" % (target))
         os.chmod(run_bin_script, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
+        logging.info("you can run\n\t%s\nfor test" % red(run_bin_script))
 
 
 

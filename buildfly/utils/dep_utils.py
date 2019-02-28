@@ -20,7 +20,8 @@ from buildfly.utils.github_api_utils import api_client
 from buildfly.utils.system_utils import exec_cmd
 import logging
 from collections import namedtuple
-DevOptions = namedtuple("DepOptions", ["cflags", "libs", "libs_path", "libs_path_option", "libs_other"])
+DevOptions = namedtuple("DepOptions",
+        ["cflags", "libs", "libs_path","libs_option", "libs_path_option", "libs_other", "share_libs_path"])
 
 
 COMMIT_SHA=".COMMIT_SHA"
@@ -30,6 +31,7 @@ def get_dep(app_dep):
     install_dir = app_dep.get_install_dir()
     cache_dir = app_dep.get_cache_dir()
     repo_dir = app_dep.get_repo_dir()
+    modules = app_dep.get_install_modules_file()
     if lib_info:
         if os.path.exists(install_dir):
             print("%s exists in %s" % (app_dep.name, install_dir))
@@ -44,8 +46,8 @@ def get_dep(app_dep):
             repo_dir_path = app_dep.get_repo_dir()
             git_clone_lib_src(lib_info, code_dir)
     elif app_dep.dep_type == 'url':
-        if os.path.exists(install_dir):
-            print("%s exist" % app_dep.name)
+        if os.path.exists(install_dir) and not app_dep.is_modules_change():
+            print("%s exist in %s" % (app_dep.name, install_dir))
             return
         tmp_file_path = os.path.join(cache_dir, "code.tar.gz")
         if not os.path.exists(tmp_file_path):
@@ -56,6 +58,8 @@ def get_dep(app_dep):
 
     bm = build_manager()
     bm.build(app_dep)
+    if app_dep.modules:
+        app_dep.save_modules()
 
 
 def detact_lib_type(libdesc):
@@ -148,50 +152,107 @@ def get_dep_compile_options(app_dep, dep_libs):
     dirs = os.listdir(install_lib_dir)
     cflags = []
     libs = []
+    libs_option = []
     lib_dirs = []
+    share_libs_path = []
+    other_options = []
     for d in dirs:
         abs_dir = os.path.join(install_lib_dir, d)
         if d == "lib" or d == "lib64":
             pkgconfig_dir = os.path.join(install_lib_dir, "lib", "pkgconfig")
-            lib_names = [l.lib_name for l in dep_libs]
+            # lib_names = [l.lib_name for l in dep_libs]
             if os.path.exists(pkgconfig_dir):
-                # if pkgconfig exists,use pkgconfig cflags
-                pkg_prefix="PKG_CONFIG_PATH=%s:$PKG_CONFIG_PATH pkg-config"
-                cmd = "%s --cflags %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
-                pkgconfig_cflags = exec_cmd(cmd)
 
-                cmd = "%s --libs-only-L %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
-                pkgconfig_libs_L_path_option = exec_cmd(cmd)
-                pkgconfig_libs_L_path = pkgconfig_libs_L_path_option.replace("-L","").split(" ")
+                share_dir_set = set()
+                for dep_lib in dep_libs:
+                    lib_names = [dep_lib.lib_name]
+                    # if pkgconfig exists,use pkgconfig cflags
+                    pkg_prefix="PKG_CONFIG_PATH=%s:$PKG_CONFIG_PATH pkg-config"
+                    cmd = "%s --cflags %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
+                    pkgconfig_cflags = exec_cmd(cmd)
+                    cflags.append(pkgconfig_cflags)
 
-                cmd = "%s --libs-only-l %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
-                pkgconfig_libs_l = exec_cmd(cmd)
+                    cmd = "%s --libs-only-L %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
+                    pkgconfig_libs_L_path_option = exec_cmd(cmd)
+                    pkgconfig_libs_L_path = pkgconfig_libs_L_path_option.replace("-L","").split(" ")
+                    lib_dirs += pkgconfig_libs_L_path
+                    if dep_lib.link_type == 'shared':
+                        share_dir_set = share_dir_set.union(pkgconfig_libs_L_path)
 
-                cmd = "%s --libs-only-other %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
-                pkgconfig_libs_other = exec_cmd(cmd)
-                dev_options = DevOptions(cflags=pkgconfig_cflags, libs = pkgconfig_libs_l,
-                        libs_path = pkgconfig_libs_L_path,
-                        libs_path_option = pkgconfig_libs_L_path_option,
-                        libs_other = pkgconfig_libs_other
-                        )
+                    cmd = "%s --libs-only-l %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
+                    pkgconfig_libs_l = exec_cmd(cmd)
+                    libs_option.append(pkgconfig_libs_l)
+
+                    pkgconfig_libs_name = pkgconfig_libs_l.replace("-l","").split(" ")
+                    libs += pkgconfig_libs_name
+
+
+                    cmd = "%s --libs-only-other %s" % (pkg_prefix, pkgconfig_dir," ".join(lib_names))
+                    pkgconfig_libs_other = exec_cmd(cmd)
+                    other_options.append(pkgconfig_libs_other)
+
+
+                dev_options = DevOptions(cflags=pkgconfig_cflags,
+                    libs = libs,
+                    libs_option = " ".join(libs_option),
+                    libs_path = lib_dirs,
+                    libs_path_option = " ".join(["-L%s" % ln for ln in lib_dirs]),
+                    libs_other = " ".join(other_options),
+                    share_libs_path = list(share_dir_set)
+                    )
 
                 return dev_options
             else:
                 lib_dirs.append(abs_dir)
-                libs += lib_names
+                has_shared = False
+                for dep_lib in dep_libs:
+                    libs.append(dep_lib.lib_name)
+                    if dep_lib.link_type == "shared":
+                        has_shared = True
+                        libs_option.append("-l%s" % dep_lib.lib_name)
+                    else:
+                        libs_option.append("-l:lib%s.a" % dep_lib.lib_name)
+                if has_shared:
+                    share_libs_path.append(abs_dir)
+
         elif d == "include":
             cflags.append("-I%s" % abs_dir)
         else:
             pass
     dev_options = DevOptions(cflags = " ".join(cflags),
-                libs = " ".join(["-l%s" % ln for ln in libs]),
+                libs = libs,
+                libs_option = " ".join(libs_option),
                 libs_path = lib_dirs,
                 libs_path_option = " ".join(["-L%s" % ln for ln in lib_dirs]),
-                libs_other = None
+                libs_other = None,
+                share_libs_path = share_libs_path
                 )
 
     return dev_options
 
+
+def get_glibc_path_cache(libc_version):
+    return os.path.expanduser("~/.buildfly/cache/glibc/%s" % libc_version)
+
+def get_glibc_path_code(libc_version):
+    return os.path.expanduser("~/.buildfly/repo/glibc/%s" % libc_version)
+
+def get_glibc_path(libc_version):
+    return os.path.expanduser("~/.buildfly/install/glibc/%s" % libc_version)
+
+def get_glibc(libc_version):
+    glibc_url = "http://ftp.gnu.org/gnu/glibc/glibc-%s.tar.gz" % (libc_version)
+    libc_path = get_glibc_path(libc_version)
+    if os.path.exists(libc_path):
+        return
+    libc_path_code = get_glibc_path_code(libc_version)
+    libc_path_cache = get_glibc_path_cache(libc_version)
+    cache_file = os.path.join(libc_path_cache, "glibc-%s.tar.gz" % libc_version)
+    download_http_pkg(glibc_url, cache_file)
+    uncompress_tar_gz(libc_path_code, cache_file)
+    CMD="cd %s/*;mkdir build;cd build;../configure --prefix=%s; make; make install" % (libc_path_code, libc_path)
+    print(CMD)
+    os.system(CMD)
 
 
 

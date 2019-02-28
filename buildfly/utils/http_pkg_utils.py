@@ -39,7 +39,7 @@ def show_progress(i, content_length,fmt="{SPEED}"):
         all_size_format = formatSize(content_length)
         speed = "%s/%s" % (size_format,all_size_format)
     else:
-        speed = "%-10s" % (size_format)
+        speed = "%s" % (size_format)
     log = fmt.replace("{SPEED}", speed)
     sys.stdout.write(log + "\r")
     sys.stdout.flush()
