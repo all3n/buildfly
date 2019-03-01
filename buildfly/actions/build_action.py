@@ -193,11 +193,12 @@ class build_action(basic_action):
             for dep_name, dep_libs in deps.items():
                 for dep_lib in dep_libs:
                     if dep_lib.libdesc.startswith("//"):
+                        print(dep_lib)
                         dep = dep_lib.name
                         lib_build_dir = os.path.join(self.build_dir, "build-lib-%s" % dep)
                         dep_lib_info = self.libs[dep]
                         lib_include_dir = dep_lib_info['includes']
-                        lib_type = dep_lib_info.get('lib_type', 'shared')
+                        lib_type = dep_lib.link_type
                         includes += lib_include_dir
                         if lib_type == 'shared':
                             library_path.append(lib_build_dir)

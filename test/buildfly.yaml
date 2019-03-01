@@ -1,0 +1,71 @@
+compiler: "cmake >= 3.10"
+glibc: 2.28
+
+test:
+    type: bin
+    srcs: ["app/test/*.cpp"]
+    cflags: "-O3"
+    libs: []
+    includes: [".."]
+    deps: [
+        "//app-lib1"
+    ]
+
+json:
+    type: bin
+    srcs: ["app/json.cpp"]
+    cflags: "-O3"
+    libs: []
+    includes: [".."]
+    deps: [
+        "//app-lib1",
+        "jsoncpp": ["static:jsoncpp"],
+        ]
+
+boost_program_option:
+    type: bin
+    srcs: ["app/boost_program_option_test.cpp"]
+    cflags: "-O3 -D_GLIBCXX_USE_CXX11_ABI=0"
+    deps: [
+        "boost" : ["static:boost_program_options"]
+        ]
+
+boost_filesystem:
+    type: bin
+    srcs: ["app/boost_filesystem_test.cpp"]
+    cflags: "-O3 -D_GLIBCXX_USE_CXX11_ABI=0"
+    deps: [
+        "boost169" : ["static:boost_filesystem"]
+        ]
+
+
+
+
+
+app-lib1:
+    type: lib
+    srcs: ["libs/a/**/*.cpp"]
+    includes: ['libs/a']
+    #lib_type: static
+
+
+
+dependency:
+    "googletest" : "google/googletest"
+    "jsoncpp" : "open-source-parsers/jsoncpp@1.8.4"
+    "boost169" : {
+        "modules" : ["filesystem", "program_options" , "math"],
+        "url":"https://sourceforge.net/projects/boost/files/boost/1.69.0/boost_1_69_0.tar.gz",
+        "cmds":[
+            "./bootstrap.sh --with-libraries=${INSTALL_MODULES} --prefix=${INSTALL_PREFIX}",
+            "./b2 -j32 variant=release define=_GLIBCXX_USE_CXX11_ABI=0 install "
+        ]
+    }
+    "boost" : {
+        "modules" : ["filesystem", "program_options" , "math"],
+        "url":"https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz",
+        "cmds":[
+            "./bootstrap.sh --with-libraries=${INSTALL_MODULES} --prefix=${INSTALL_PREFIX}",
+            "./b2 -j32 variant=release define=_GLIBCXX_USE_CXX11_ABI=0 install "
+        ]
+    }
