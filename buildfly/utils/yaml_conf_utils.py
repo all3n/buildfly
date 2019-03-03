@@ -12,6 +12,7 @@
 import yaml
 from collections import namedtuple, defaultdict
 from buildfly.utils.dep_utils import *
+from buildfly.utils.system_utils import get_bfly_path
 from six.moves.urllib_parse import urlparse
 import hashlib
 import sys
@@ -73,13 +74,11 @@ class BuildDependency(object):
     def get_install_modules_file(self):
         return os.path.join(self.get_install_dir(),"buildfly.modules")
 
-    def get_bfly_dir(self, d):
-        return os.path.expanduser("~/.buildfly/%s" % d)
 
     def get_base_dir(self, category = "repo"):
         lib_info = self.lib_info
         if self.dep_type == 'github' or self.dep_type == "git":
-            out_dir = self.get_bfly_dir("{category}/{lib_type}/{owner}/{repo}/{repo_info}".format(
+            out_dir = get_bfly_path("{category}/{lib_type}/{owner}/{repo}/{repo_info}".format(
                 category = category,
                 lib_type = lib_info["type"],
                 owner = lib_info['owner'],
@@ -90,7 +89,7 @@ class BuildDependency(object):
             urlparse_res = urlparse(self.url)
             url_host = urlparse_res.netloc
             url_md5 = hashlib.md5(self.url.encode('utf-8')).hexdigest()
-            out_dir = self.get_bfly_dir("{category}/{name}/{url_md5}".format(
+            out_dir = get_bfly_path("{category}/{name}/{url_md5}".format(
                 category = category,
                 name = self.name,
                 url_md5 = url_md5
