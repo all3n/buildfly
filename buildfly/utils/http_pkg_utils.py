@@ -13,6 +13,7 @@ import requests
 import os
 import sys
 from buildfly.utils.compress_utils import *
+from buildfly.config.global_config import G_CONFIG
 
 
 def formatSize(bytes):
@@ -34,6 +35,8 @@ def formatSize(bytes):
         return "%.2fkb" % (kb)
 
 def show_progress(i, content_length,fmt="{SPEED}"):
+    sys.stdout.write((len(fmt) + 10) * " " + "\r")
+    sys.stdout.flush()
     size_format = formatSize(i)
     if content_length > 0:
         all_size_format = formatSize(content_length)
@@ -51,7 +54,8 @@ def download_http_pkg(url,tmp_pkg_file):
     if not os.path.exists(pkg_base_dir):
         os.makedirs(pkg_base_dir)
 
-    res = requests.get(url, stream = True, headers={'Accept-Encoding': None})
+    proxy = G_CONFIG.get_value("proxy")
+    res = requests.get(url, stream = True, headers={'Accept-Encoding': None}, proxies = proxy)
     try:
         # 'Transfer-Encoding': 'chunked' chunked 类型 没有content-length
         if "Transfer-Encoding" in res.headers and res.headers["Transfer-Encoding"] == "chunked":
