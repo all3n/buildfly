@@ -69,6 +69,7 @@ buildfly 是c++基于github管理包管理编译工具.
 1. bfly config proxy.http sock5://127.0.0.1:1086
 1. bfly config proxy.https sock5://127.0.0.1:1086
 
+## TODO
 [ ] cmake generate
 [ ] docker support
 [ ] global config
