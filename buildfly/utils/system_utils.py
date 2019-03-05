@@ -23,3 +23,6 @@ def exec_cmd(cmd):
         data = f.read().strip()
     return data
 
+
+def get_bfly_path(d):
+    return os.path.expanduser("~/.buildfly/%s" % d)

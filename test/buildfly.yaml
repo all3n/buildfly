@@ -46,7 +46,7 @@ app-lib1:
     type: lib
     srcs: ["libs/a/**/*.cpp"]
     includes: ['libs/a']
-    #lib_type: static
+    lib_type: static
 
 
 
