@@ -54,15 +54,13 @@ class global_config(object):
             if nf in fv:
                 fv = fv[nf]
             else:
-                print("config key: %s not exists" % name)
-                sys.exit(-1)
+                return None
 
         last_field = name_fields[-1]
         if last_field in fv:
             return fv[last_field]
         else:
-            print("config key: %s not exists" % name)
-            sys.exit(-1)
+            return None
 
 
     def save(self):

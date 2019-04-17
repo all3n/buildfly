@@ -33,6 +33,7 @@ class BuildDependency(object):
     _install_dir = None
     _code_dir = None
     def __init__(self,name, dep_obj):
+        print(dep_obj)
         self.name = name
         if type(dep_obj) == str:
             self.libdesc = dep_obj
@@ -95,6 +96,7 @@ class BuildDependency(object):
                 url_md5 = url_md5
             ))
         else:
+            print(lib_info)
             print("%s not support" % self.dep_type)
             sys.exit(-1)
 
@@ -141,7 +143,6 @@ class BuildConf(object):
 
 
     def __init__(self, yaml_conf):
-        print(yaml_conf)
         for k,v in yaml_conf.items():
             if type(v) == dict and 'type' in v:
                 if v['type'] == 'bin':
@@ -238,6 +239,11 @@ class BuildConf(object):
 
 def yaml_conf_loader(yaml_file):
     with open(yaml_file, "r", encoding='utf-8') as yf:
-        conf =  yaml.load(yf.read())
+        try:
+            conf =  yaml.load(yf.read())
+        except Exception as e:
+            print(e)
+            print("yaml load fail")
+            sys.exit(-1)
         # import json; print(json.dumps(conf, indent = 2))
         return BuildConf(conf)
