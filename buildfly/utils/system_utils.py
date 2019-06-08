@@ -26,3 +26,13 @@ def exec_cmd(cmd):
 
 def get_bfly_path(d):
     return os.path.expanduser("~/.buildfly/%s" % d)
+
+
+
+
+def bfly_exec(f, globals, locals):
+    exec(compile(open(f, "rb").read(), f, "exec"), globals, locals )
+
+
+def register_function(fun):
+    globals()[fun.__name__] = fun

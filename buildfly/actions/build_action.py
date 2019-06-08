@@ -19,12 +19,14 @@ import stat
 import re
 
 from buildfly.actions.basic_action import basic_action
-from buildfly.utils.yaml_conf_utils import yaml_conf_loader
+#from buildfly.utils.yaml_conf_utils import yaml_conf_loader
 from buildfly.utils.dep_utils import *
 from buildfly.utils.color_utils import *
 from buildfly.utils.system_utils import *
+from buildfly.targets import *
 
 CONF_NAME="buildfly.yaml"
+BFLY_CONF = "BUILDFLY"
 COMPILER_PATTERN = re.compile("(\w+)([<=>]{1,2})?([\d\.\w]+)?")
 LIBC_VERSION_PATTERN = re.compile("libc-([\d\.]+)\.so")
 
@@ -33,21 +35,70 @@ class build_action(basic_action):
     def parse_args(self, parser):
         parser.add_argument('target', metavar='target', type=str, nargs = "?",
                     help="build target")
+        parser.add_argument("-b",'--build_dir',  type=str, default="build",
+                            help="build target")
+
 
     def run(self):
         cur_dir = os.path.abspath(sys.path[0])
+
+        print(self.args)
+        self.build_dir = self.args.build_dir
+        if not os.path.exists(self.build_dir):
+            os.makedirs(self.build_dir)
+        print(self.build_dir)
+        BUILD_MANAGER.build_dir = self.build_dir
+
+
         # print("run build action in %s" % (cur_dir))
-        self.parse_build_conf(os.path.join(cur_dir, CONF_NAME))
-        self.check_compiler(self.compiler_info)
+        bfly_conf = os.path.join(cur_dir, BFLY_CONF)
+        export_vars = BUILD_MANAGER.get_exports()
+        try:
+            if os.path.exists(bfly_conf):
+                self.load_bfly_conf(cur_dir, "", export_vars)
+            else:
+                raise Exception("%s not exists" % BFLY_CONF)
+        except NameError as e:
+            support_keys = set(export_vars.keys())
+            support_keys.remove("__builtins__")
+            print("%s \nonly support: %s " % (e, support_keys))
+            sys.exit(-1)
+
+        BUILD_MANAGER.check_deps_valid()
+        print("build rules load finished!")
+
+        BUILD_MANAGER.run(self.args.target)
+
+        #self.parse_build_conf(os.path.join(cur_dir, CONF_NAME))
+        #self.check_compiler(self.compiler_info)
         # self.check_glibc()
-        self.start_build()
+        #self.start_build()
+
+    def load_bfly_conf(self, dir, package, export_vars):
+        res = {"package": package}
+        # TODO
+        BUILD_MANAGER.package = "//" + package
+        bconf = os.path.join(dir, BFLY_CONF)
+        bfly_exec(bconf, export_vars, res)
+        for subp in os.listdir(dir):
+            subp_file = os.path.join(dir, subp)
+            subp_conf = os.path.join(subp_file, BFLY_CONF)
+            if os.path.isdir(subp) and os.path.isfile(subp_conf):
+                sub_package = package + "/" + subp if package else subp
+                self.load_bfly_conf(subp_file, sub_package, export_vars)
+        BUILD_MANAGER.package = None
+
+
+
+
 
     def parse_build_conf(self, conf_file):
         if not os.path.exists(conf_file):
             print("%s not exist!" % conf_file)
             sys.exit(-1)
 
-        app_conf = yaml_conf_loader(conf_file)
+        #app_conf = yaml_conf_loader(conf_file)
+        app_conf = None
         # print(app_conf)
         self.app_conf = app_conf
 

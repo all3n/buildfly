@@ -11,5 +11,8 @@ fi
 bin=`dirname "$SCRIPT"`
 export APP_DIR=`cd "$bin/"; pwd`
 export PYTHONPATH=$APP_DIR:$PYTHONPATH
-
-python -m buildfly "$@"
+if [[ "$1" == "ipython" ]];then
+    ipython
+else
+    python -m buildfly "$@"
+fi
