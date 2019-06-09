@@ -13,17 +13,21 @@ import os
 import importlib
 from buildfly.utils.labels_utils import parse_label
 from buildfly.generator.makefile_generator import makefile_generator
+
+
 class build_manager(object):
     package = None
     targets = {}
     vars = {}
     flags = {}
     build_dir = None
+    src_dir = None
     generator = "makefile"
+
     def __init__(self):
         pass
 
-    def build(self,app_dep):
+    def build(self, app_dep):
         code_dir = app_dep.get_code_dir()
         install_dir = app_dep.get_install_dir()
         cmds = app_dep.cmds
@@ -36,8 +40,6 @@ class build_manager(object):
         build_obj = getattr(build_module, build_class)()
         build_obj.build(app_dep, code_dir, install_dir)
 
-
-
     def detact_build_type(self, code_dir):
         code_files = os.listdir(code_dir)
         if "CMakeLists.txt" in code_files:
@@ -49,19 +51,18 @@ class build_manager(object):
         else:
             raise Exception("unsupport build type")
 
-
-
     def register_target(self, target):
         abs_label = parse_label(target.name, self.package)
         if target.deps:
             target.deps = [parse_label(l, self.package) for l in target.deps]
+        target.package = self.package
         print("register %s  =>  %s" % (abs_label, target))
         self.targets[abs_label] = target
 
     def register_var(self, name, var):
         self.vars[name] = var
 
-    def register_func(self , fun):
+    def register_func(self, fun):
         self.register_var(fun.__name__, fun)
 
     def get_exports(self):
@@ -93,28 +94,16 @@ class build_manager(object):
         print("start build target %s" % label)
         self.generator.write(target)
 
-        #...
+        # ...
         self.flags[label] = True
 
-
-    def run(self, label = None):
+    def run(self, label=None):
         if self.generator == "makefile":
-            gen_file = os.path.join(self.build_dir, "Makefile")
-            self.generator = makefile_generator(gen_file)
-        if label:
-            self.build_target(label)
-        else:
-            # build all target
-            for l, target in self.targets.items():
-                self.build_target(l)
+            self.generator = makefile_generator(self.src_dir, self.build_dir)
+            self.generator.gen(self.targets)
 
-
-        if self.generator:
-            self.generator.close()
-
-
-
-
+            label = label if label else "all"
+            self.generator.build_target(label)
 
 
 

@@ -9,6 +9,7 @@ class CcTarget(object):
                  hdrs = None,
                  copts = None,
                  linkopts = None):
+        self.package = None
         self.name = name
         self.target_type = target_type
         self.deps = deps
@@ -20,7 +21,7 @@ class CcTarget(object):
         assert len(srcs) > 0, "srcs must be set"
 
     def __str__(self):
-        return "{cc_target[%s] name:%s deps:%s}" % (self.target_type, self.name, self.deps)
+        return "{cc_target[%s] name:%s deps:%s package:%s}" % (self.target_type, self.name, self.deps, self.package)
 
 
 def cc_binary(

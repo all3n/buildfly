@@ -42,11 +42,11 @@ class build_action(basic_action):
     def run(self):
         cur_dir = os.path.abspath(sys.path[0])
 
-        print(self.args)
         self.build_dir = self.args.build_dir
         if not os.path.exists(self.build_dir):
             os.makedirs(self.build_dir)
-        print(self.build_dir)
+        self.build_dir = os.path.abspath(self.build_dir)
+        BUILD_MANAGER.src_dir = cur_dir
         BUILD_MANAGER.build_dir = self.build_dir
 
 
