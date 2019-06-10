@@ -23,6 +23,13 @@ class CcTarget(object):
     def __str__(self):
         return "{cc_target[%s] name:%s deps:%s package:%s}" % (self.target_type, self.name, self.deps, self.package)
 
+    def is_shared(self):
+        if not self.linkopts:
+            return False
+        else:
+            return "-shared" in self.linkopts
+
+
 
 def cc_binary(
         name,

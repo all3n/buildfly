@@ -10,6 +10,7 @@
 
 """
 import os
+import platform
 
 
 def check_command_exists(cmd):
@@ -36,3 +37,16 @@ def bfly_exec(f, globals, locals):
 
 def register_function(fun):
     globals()[fun.__name__] = fun
+
+def sys_info():
+    return platform.machine(), platform.system()
+
+
+def target_ext():
+    system = platform.system()
+    if system == "Windows":
+        return ".dll", ".lib", ".exe"
+    elif system == "Darwin":
+        return ".dylib", ".a", ""
+    else:
+        return ".so", ".a", ""
