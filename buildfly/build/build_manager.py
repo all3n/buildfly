@@ -11,6 +11,7 @@
 """
 import importlib
 import os
+from buildfly.utils.string_utils import camelize
 
 
 class BuildManager(object):
@@ -27,7 +28,7 @@ class BuildManager(object):
             build_type = self.detact_build_type(code_dir)
         build_class = build_type + "_build"
         build_module = importlib.import_module("buildfly.build." + build_class)
-        build_obj = getattr(build_module, build_class)()
+        build_obj = getattr(build_module, camelize(build_class))()
         build_obj.build(app_dep, code_dir, install_dir)
 
     def detact_build_type(self, code_dir):

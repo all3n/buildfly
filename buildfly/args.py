@@ -14,11 +14,12 @@ import importlib
 import os
 import sys
 
+from buildfly.utils.string_utils import camelize
 ACTION_PACKAGE = "buildfly.actions"
 
 actions_module = importlib.import_module(ACTION_PACKAGE)
 action_module_abs_path = actions_module.__path__[0]
-all_actions = [f.split("_")[0] for f in os.listdir(action_module_abs_path) if "_action" in f and f != "basic_action.py"]
+all_actions = [f.split("_")[0] for f in os.listdir(action_module_abs_path) if "_action" in f and f != "base_action.py"]
 
 parser = argparse.ArgumentParser(prog="bfly", description='buildfly action [options]')
 parser.add_argument('action', metavar='action', type=str,
@@ -40,7 +41,7 @@ def _build_action(action):
         parser.print_help()
         sys.exit(-1)
     action_module = "%s.%s_action" % (ACTION_PACKAGE, action)
-    action_class_name = "%sAction" % (action)
+    action_class_name = "%sAction" % (camelize(action))
     action_class = getattr(importlib.import_module(action_module), action_class_name)
     action_obj = action_class()
     return action_obj

@@ -1,0 +1,4 @@
+bin=`dirname "$0"`
+export APP_HOME=`cd "$bin/"; pwd`
+export PYTHONPATH=$APP_HOME
+python -m buildfly $@
