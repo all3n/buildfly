@@ -16,7 +16,6 @@ def check_command_exists(cmd):
     return os.system("which %s >/dev/null 2>&1" % cmd) == 0
 
 
-
 def exec_cmd(cmd):
     data = None
     with os.popen(cmd) as f:

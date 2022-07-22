@@ -9,6 +9,6 @@
 """
 
 """
-class basic_build(object):
+class BasicBuild(object):
     def build(self, app_dep, code_dir, install_dir_path):
         pass

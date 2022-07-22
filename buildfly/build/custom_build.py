@@ -11,16 +11,17 @@
 """
 
 import os
-from buildfly.build.basic_build import basic_build
+from buildfly.build.basic_build import BasicBuild
 
-class custom_build(basic_build):
+
+class CustomBuild(BasicBuild):
     def build(self, app_dep, code_dir, install_dir_path):
         build_script = self.write_custom_build_script(code_dir, install_dir_path, app_dep)
-        CMD="cd %s;bash %s;" % (code_dir, build_script)
+        CMD = "cd %s;bash %s;" % (code_dir, build_script)
         print(CMD)
         os.system(CMD)
 
-    def write_custom_build_script(self, code_dir, install_dir_path,  app_dep):
+    def write_custom_build_script(self, code_dir, install_dir_path, app_dep):
         cmds = app_dep.cmds
         modules = app_dep.modules
 
@@ -35,7 +36,3 @@ class custom_build(basic_build):
             for cmd in cmds:
                 f.write(cmd + "\n")
         return build_shell_file
-
-
-
-

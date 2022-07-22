@@ -9,27 +9,22 @@
 """
 
 """
-import sys
-import os
 import glob
-import json
 import re
-import logging
 import stat
-import re
 
-from buildfly.actions.basic_action import basic_action
-from buildfly.utils.yaml_conf_utils import yaml_conf_loader
-from buildfly.utils.dep_utils import *
+from buildfly.actions.base_action import BaseAction
 from buildfly.utils.color_utils import *
+from buildfly.utils.dep_utils import *
 from buildfly.utils.system_utils import *
+from buildfly.utils.yaml_conf_utils import yaml_conf_loader
 
 CONF_NAME="buildfly.yaml"
 COMPILER_PATTERN = re.compile("(\w+)([<=>]{1,2})?([\d\.\w]+)?")
 LIBC_VERSION_PATTERN = re.compile("libc-([\d\.]+)\.so")
 
 
-class build_action(basic_action):
+class BuildAction(BaseAction):
     def parse_args(self, parser):
         parser.add_argument('target', metavar='target', type=str, nargs = "?",
                     help="build target")

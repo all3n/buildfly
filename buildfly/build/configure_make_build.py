@@ -11,12 +11,12 @@
 """
 
 import os
-from buildfly.build.basic_build import basic_build
+from buildfly.build.basic_build import BasicBuild
 
-class configure_make_build(basic_build):
-    def build(self, app_dep,  code_dir, install_dir_path):
+
+class ConfigureMakeBuild(BasicBuild):
+    def build(self, app_dep, code_dir, install_dir_path):
         print("configure_make %s" % code_dir)
-        CMD="cd %s;./configure --prefix=%s; make; make install" % (code_dir, install_dir_path)
+        CMD = "cd %s;./configure --prefix=%s; make; make install" % (code_dir, install_dir_path)
         print(CMD)
         os.system(CMD)
-

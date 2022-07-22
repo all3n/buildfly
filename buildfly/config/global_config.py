@@ -14,8 +14,10 @@ import yaml
 import sys
 from buildfly.utils.system_utils import get_bfly_path
 
-class global_config(object):
-    sys_config  = {}
+
+class GlobalConfig(object):
+    sys_config = {}
+
     def __init__(self, f):
         self.f = f
         if os.path.exists(f):
@@ -24,7 +26,7 @@ class global_config(object):
                 if not self.sys_config:
                     self.sys_config = {}
 
-    def set_value(self, name, value, save = False):
+    def set_value(self, name, value, save=False):
         # set value
         name_fields = name.split(".")
 
@@ -41,11 +43,9 @@ class global_config(object):
             print("%s type must be dict: current is %s" % (name, type(fv)))
             sys.exit(-1)
         fv[last_field] = value
-        print("set %s : %s" % (name , value))
+        print("set %s : %s" % (name, value))
         if save:
             self.save()
-
-
 
     def get_value(self, name):
         name_fields = name.split(".")
@@ -62,11 +62,9 @@ class global_config(object):
         else:
             return None
 
-
     def save(self):
         with open(self.f, "w") as f:
             yaml.dump(self.sys_config, f)
 
 
-
-G_CONFIG = global_config(get_bfly_path("bfly-config.yaml"))
+G_CONFIG = GlobalConfig(get_bfly_path("bfly-config.yaml"))

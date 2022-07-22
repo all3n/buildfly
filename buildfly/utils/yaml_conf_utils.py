@@ -9,19 +9,23 @@
 """
 
 """
+import hashlib
+import os
+import sys
+from collections import defaultdict
+
 import yaml
-from collections import namedtuple, defaultdict
+from six.moves.urllib_parse import urlparse
+
 from buildfly.utils.dep_utils import *
 from buildfly.utils.system_utils import get_bfly_path
-from six.moves.urllib_parse import urlparse
-import hashlib
-import sys
-import os
+
 TargetDep = namedtuple('TargetDep', ['name', 'libdesc', 'link_type', 'lib_name'])
 
 
 class BuildTarget(object):
     pass
+
 
 class BuildDependency(object):
     cmds = []
@@ -32,7 +36,8 @@ class BuildDependency(object):
     _repo_dir = None
     _install_dir = None
     _code_dir = None
-    def __init__(self,name, dep_obj):
+
+    def __init__(self, name, dep_obj):
         print(dep_obj)
         self.name = name
         if type(dep_obj) == str:
@@ -49,6 +54,7 @@ class BuildDependency(object):
                 self.cmds = dep_obj['cmds']
             if 'modules' in dep_obj:
                 self.modules = dep_obj['modules']
+
     def save_modules(self):
         with open(self.get_install_modules_file(), "w") as mf:
             mf.write(",".join(self.modules))
@@ -63,7 +69,6 @@ class BuildDependency(object):
         else:
             return False
 
-
     def get_install_modules(self):
         install_modules_file = self.get_install_modules_file()
         if os.path.exists(install_modules_file):
@@ -73,27 +78,26 @@ class BuildDependency(object):
             return []
 
     def get_install_modules_file(self):
-        return os.path.join(self.get_install_dir(),"buildfly.modules")
+        return os.path.join(self.get_install_dir(), "buildfly.modules")
 
-
-    def get_base_dir(self, category = "repo"):
+    def get_base_dir(self, category="repo"):
         lib_info = self.lib_info
         if self.dep_type == 'github' or self.dep_type == "git":
             out_dir = get_bfly_path("{category}/{lib_type}/{owner}/{repo}/{repo_info}".format(
-                category = category,
-                lib_type = lib_info["type"],
-                owner = lib_info['owner'],
-                repo = lib_info['repo'],
-                repo_info = "/".join(lib_info['repo_info'])
+                category=category,
+                lib_type=lib_info["type"],
+                owner=lib_info['owner'],
+                repo=lib_info['repo'],
+                repo_info="/".join(lib_info['repo_info'])
             ))
         elif self.dep_type == 'url':
             urlparse_res = urlparse(self.url)
             url_host = urlparse_res.netloc
             url_md5 = hashlib.md5(self.url.encode('utf-8')).hexdigest()
             out_dir = get_bfly_path("{category}/{name}/{url_md5}".format(
-                category = category,
-                name = self.name,
-                url_md5 = url_md5
+                category=category,
+                name=self.name,
+                url_md5=url_md5
             ))
         else:
             print(lib_info)
@@ -133,17 +137,14 @@ class BuildDependency(object):
         return self._code_dir
 
 
-
-
 class BuildConf(object):
     bins = {}
     libs = {}
     args = {}
     dependency = {}
 
-
     def __init__(self, yaml_conf):
-        for k,v in yaml_conf.items():
+        for k, v in yaml_conf.items():
             if type(v) == dict and 'type' in v:
                 if v['type'] == 'bin':
                     self.bins[k] = self.parse_bin_or_lib(v)
@@ -156,10 +157,10 @@ class BuildConf(object):
 
     def __str__(self):
         return "bins:%s libs:%s args:%s dependency:%s" % (
-                self.bins, self.libs, self.args, self.dependency
-            )
+            self.bins, self.libs, self.args, self.dependency
+        )
 
-    def parse_dependencies(self , deps):
+    def parse_dependencies(self, deps):
         if deps:
             for name, dep_obj in deps.items():
                 self.dependency[name] = BuildDependency(name, dep_obj)
@@ -176,7 +177,6 @@ class BuildConf(object):
             v['deps'] = deps_map
         return v
 
-
     # parse dep
     def parse_dep(self, dep):
         dtype = type(dep)
@@ -187,7 +187,7 @@ class BuildConf(object):
             if dep.startswith("//"):
                 name = dep[2:]
                 dep_type = "local"
-                target_dep = TargetDep(name=name, libdesc = dep, link_type = "static", lib_name=name)
+                target_dep = TargetDep(name=name, libdesc=dep, link_type="static", lib_name=name)
                 target_deps.append(target_dep)
             else:
                 dinfos = dep.split(":")
@@ -196,26 +196,27 @@ class BuildConf(object):
                 # "name:static:lib_name"
                 if len_dinfo == 3:
                     name, link_type, lib_name = dinfos
-                    target_dep = TargetDep(name=name, libdesc = name, link_type = link_type, lib_name=lib_name)
+                    target_dep = TargetDep(name=name, libdesc=name, link_type=link_type, lib_name=lib_name)
                 elif len_dinfo == 2:
                     name, link_type = dinfos
-                    target_dep = TargetDep(name=name, libdesc = name, link_type = link_type, lib_name=name)
+                    target_dep = TargetDep(name=name, libdesc=name, link_type=link_type, lib_name=name)
                 elif len_dinfo == 1:
                     name = dinfos
-                    target_dep = TargetDep(name=name, libdesc = name, link_type = "static", lib_name=name)
+                    target_dep = TargetDep(name=name, libdesc=name, link_type="static", lib_name=name)
                 else:
-                    raise Exception("%s,lib desc len:%d not support,must match name:link_type:lib_name" % (dep, len_dinfo))
+                    raise Exception(
+                        "%s,lib desc len:%d not support,must match name:link_type:lib_name" % (dep, len_dinfo))
                 target_deps.append(target_dep)
         elif dtype == dict:
-            for k,v in dep.items():
+            for k, v in dep.items():
                 typev = type(v)
                 if typev == dict:
                     # "name": "static:libname"   or {'googletest': 'static:gtest'}
-                    for dn,dv in v.items():
+                    for dn, dv in v.items():
                         dv_split = dv.split(":")
                         assert len(dv_split) == 2
                         link_type, lib_name = dv_split
-                        target_dep = TargetDep(name=dn, libdesc = dn, link_type = link_type, lib_name=lib_name)
+                        target_dep = TargetDep(name=dn, libdesc=dn, link_type=link_type, lib_name=lib_name)
                         target_deps.append(target_dep)
                 elif typev == list:
                     # "name": ["static:libname"]
@@ -223,24 +224,23 @@ class BuildConf(object):
                         dv_split = dvs.split(":")
                         assert len(dv_split) == 2
                         link_type, lib_name = dv_split
-                        target_dep = TargetDep(name=k, libdesc = k, link_type = link_type, lib_name=lib_name)
+                        target_dep = TargetDep(name=k, libdesc=k, link_type=link_type, lib_name=lib_name)
                         target_deps.append(target_dep)
                 elif typev == str:
                     dv_split = v.split(":")
                     assert len(dv_split) == 2
                     link_type, lib_name = dv_split
-                    target_dep = TargetDep(name=k, libdesc = k, link_type = link_type, lib_name=lib_name)
+                    target_dep = TargetDep(name=k, libdesc=k, link_type=link_type, lib_name=lib_name)
                     target_deps.append(target_dep)
                 else:
                     raise Exception("%s,type dep only support list,dict" % (v))
         return target_deps
 
 
-
 def yaml_conf_loader(yaml_file):
     with open(yaml_file, "r", encoding='utf-8') as yf:
         try:
-            conf =  yaml.load(yf.read())
+            conf = yaml.load(yf.read())
         except Exception as e:
             print(e)
             print("yaml load fail")

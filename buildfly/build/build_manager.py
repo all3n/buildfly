@@ -9,14 +9,15 @@
 """
 
 """
-import os
 import importlib
+import os
 
-class build_manager(object):
+
+class BuildManager(object):
     def __init__(self):
         pass
 
-    def build(self,app_dep):
+    def build(self, app_dep):
         code_dir = app_dep.get_code_dir()
         install_dir = app_dep.get_install_dir()
         cmds = app_dep.cmds
@@ -29,8 +30,6 @@ class build_manager(object):
         build_obj = getattr(build_module, build_class)()
         build_obj.build(app_dep, code_dir, install_dir)
 
-
-
     def detact_build_type(self, code_dir):
         code_files = os.listdir(code_dir)
         if "CMakeLists.txt" in code_files:
@@ -41,7 +40,3 @@ class build_manager(object):
             return "makefile"
         else:
             raise Exception("unsupport build type")
-
-
-
-

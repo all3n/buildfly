@@ -7,11 +7,16 @@
 # Distributed under terms of the MIT license.
 
 """
+Action Base Class
 
 """
-class basic_action(object):
+
+
+class BaseAction(object):
     args = None
+
     def run(self):
         pass
+
     def parse_args(self, parser):
         pass

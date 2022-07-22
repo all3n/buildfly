@@ -9,22 +9,23 @@
 """
 
 """
-import os
+import logging
 import sys
 from collections import namedtuple
-from buildfly.build.build_manager import build_manager
+
+from buildfly.build.build_manager import BuildManager
 from buildfly.utils.compress_utils import *
-from buildfly.utils.io_utils import *
-from buildfly.utils.http_pkg_utils import download_http_pkg
 from buildfly.utils.github_api_utils import api_client
+from buildfly.utils.http_pkg_utils import download_http_pkg
+from buildfly.utils.io_utils import *
 from buildfly.utils.system_utils import exec_cmd
-import logging
-from collections import namedtuple
+
 DevOptions = namedtuple("DepOptions",
-        ["cflags", "libs", "libs_path","libs_option", "libs_path_option", "libs_other", "share_libs_path"])
+                        ["cflags", "libs", "libs_path", "libs_option", "libs_path_option", "libs_other",
+                         "share_libs_path"])
 
+COMMIT_SHA = ".COMMIT_SHA"
 
-COMMIT_SHA=".COMMIT_SHA"
 
 def get_dep(app_dep):
     lib_info = app_dep.lib_info
@@ -51,12 +52,11 @@ def get_dep(app_dep):
             return
         tmp_file_path = os.path.join(cache_dir, "code.tar.gz")
         if not os.path.exists(tmp_file_path):
-            download_http_pkg(app_dep.url,tmp_file_path)
+            download_http_pkg(app_dep.url, tmp_file_path)
         uncompress_tar_gz(repo_dir, tmp_file_path)
         code_dir = app_dep.get_code_dir()
 
-
-    bm = build_manager()
+    bm = BuildManager()
     bm.build(app_dep)
     if app_dep.modules:
         app_dep.save_modules()
@@ -89,7 +89,7 @@ def detact_lib_type(libdesc):
                 tags_info = api_client.list_tags(owner, repo_name)
                 if repo_tag in tags_info:
                     tag_info = tags_info[repo_tag]
-                    #print(tag_info)
+                    # print(tag_info)
                     tarball_url = tag_info["tarball_url"]
                     lib_info['tarball_url'] = tarball_url
                     lib_info['commit'] = tag_info["commit"]
@@ -116,7 +116,7 @@ def detact_lib_type(libdesc):
         lib_info["type"] = "git"
         lib_info["url"] = libdesc
     else:
-        DESC_TYPE_HELP="""
+        DESC_TYPE_HELP = """
         only support
             onwer/repo          github repo path
             xxxxx.git           git url,will use local git clone code from this url
@@ -124,6 +124,7 @@ def detact_lib_type(libdesc):
         print("%s is not valid repo pattern,not support:%s" % (libdesc, DESC_TYPE_HELP))
         sys.exit(-1)
     return lib_info
+
 
 def process_github_lib(app_dep, repo_dir_path):
     lib_info = app_dep.lib_info
@@ -135,7 +136,7 @@ def process_github_lib(app_dep, repo_dir_path):
     if read_file_line(commit_sha_file) == commit_sha:
         logging.info("%s code exist" % commit_sha)
     else:
-        download_http_pkg(lib_info['tarball_url'],tmp_file_path)
+        download_http_pkg(lib_info['tarball_url'], tmp_file_path)
         write_to_file(commit_sha_file, commit_sha)
 
     uncompress_tar_gz(repo_dir_path, tmp_file_path)
@@ -167,14 +168,14 @@ def get_dep_compile_options(app_dep, dep_libs):
                 for dep_lib in dep_libs:
                     lib_names = [dep_lib.lib_name]
                     # if pkgconfig exists,use pkgconfig cflags
-                    pkg_prefix="PKG_CONFIG_PATH=%s:$PKG_CONFIG_PATH pkg-config" % pkgconfig_dir
-                    cmd = "%s --cflags %s" % (pkg_prefix," ".join(lib_names))
+                    pkg_prefix = "PKG_CONFIG_PATH=%s:$PKG_CONFIG_PATH pkg-config" % pkgconfig_dir
+                    cmd = "%s --cflags %s" % (pkg_prefix, " ".join(lib_names))
                     pkgconfig_cflags = exec_cmd(cmd)
                     cflags.append(pkgconfig_cflags)
 
                     cmd = "%s --libs-only-L %s" % (pkg_prefix, " ".join(lib_names))
                     pkgconfig_libs_L_path_option = exec_cmd(cmd)
-                    pkgconfig_libs_L_path = pkgconfig_libs_L_path_option.replace("-L","").split(" ")
+                    pkgconfig_libs_L_path = pkgconfig_libs_L_path_option.replace("-L", "").split(" ")
                     lib_dirs += pkgconfig_libs_L_path
                     if dep_lib.link_type == 'shared':
                         share_dir_set = share_dir_set.union(pkgconfig_libs_L_path)
@@ -183,23 +184,21 @@ def get_dep_compile_options(app_dep, dep_libs):
                     pkgconfig_libs_l = exec_cmd(cmd)
                     libs_option.append(pkgconfig_libs_l)
 
-                    pkgconfig_libs_name = pkgconfig_libs_l.replace("-l","").split(" ")
+                    pkgconfig_libs_name = pkgconfig_libs_l.replace("-l", "").split(" ")
                     libs += pkgconfig_libs_name
-
 
                     cmd = "%s --libs-only-other %s" % (pkg_prefix, " ".join(lib_names))
                     pkgconfig_libs_other = exec_cmd(cmd)
                     other_options.append(pkgconfig_libs_other)
 
-
                 dev_options = DevOptions(cflags=pkgconfig_cflags,
-                    libs = libs,
-                    libs_option = " ".join(libs_option),
-                    libs_path = lib_dirs,
-                    libs_path_option = " ".join(["-L%s" % ln for ln in lib_dirs]),
-                    libs_other = " ".join(other_options),
-                    share_libs_path = list(share_dir_set)
-                    )
+                                         libs=libs,
+                                         libs_option=" ".join(libs_option),
+                                         libs_path=lib_dirs,
+                                         libs_path_option=" ".join(["-L%s" % ln for ln in lib_dirs]),
+                                         libs_other=" ".join(other_options),
+                                         share_libs_path=list(share_dir_set)
+                                         )
 
                 return dev_options
             else:
@@ -219,14 +218,14 @@ def get_dep_compile_options(app_dep, dep_libs):
             cflags.append("-I%s" % abs_dir)
         else:
             pass
-    dev_options = DevOptions(cflags = " ".join(cflags),
-                libs = libs,
-                libs_option = " ".join(libs_option),
-                libs_path = lib_dirs,
-                libs_path_option = " ".join(["-L%s" % ln for ln in lib_dirs]),
-                libs_other = None,
-                share_libs_path = share_libs_path
-                )
+    dev_options = DevOptions(cflags=" ".join(cflags),
+                             libs=libs,
+                             libs_option=" ".join(libs_option),
+                             libs_path=lib_dirs,
+                             libs_path_option=" ".join(["-L%s" % ln for ln in lib_dirs]),
+                             libs_other=None,
+                             share_libs_path=share_libs_path
+                             )
 
     return dev_options
 
@@ -234,11 +233,14 @@ def get_dep_compile_options(app_dep, dep_libs):
 def get_glibc_path_cache(libc_version):
     return os.path.expanduser("~/.buildfly/cache/glibc/%s" % libc_version)
 
+
 def get_glibc_path_code(libc_version):
     return os.path.expanduser("~/.buildfly/repo/glibc/%s" % libc_version)
 
+
 def get_glibc_path(libc_version):
     return os.path.expanduser("~/.buildfly/install/glibc/%s" % libc_version)
+
 
 def get_glibc(libc_version):
     glibc_url = "http://ftp.gnu.org/gnu/glibc/glibc-%s.tar.gz" % (libc_version)
@@ -250,11 +252,6 @@ def get_glibc(libc_version):
     cache_file = os.path.join(libc_path_cache, "glibc-%s.tar.gz" % libc_version)
     download_http_pkg(glibc_url, cache_file)
     uncompress_tar_gz(libc_path_code, cache_file)
-    CMD="cd %s/*;mkdir build;cd build;../configure --prefix=%s; make; make install" % (libc_path_code, libc_path)
+    CMD = "cd %s/*;mkdir build;cd build;../configure --prefix=%s; make; make install" % (libc_path_code, libc_path)
     print(CMD)
     os.system(CMD)
-
-
-
-
-

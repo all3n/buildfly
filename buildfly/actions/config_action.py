@@ -9,31 +9,25 @@
 """
 
 """
-import sys
-import os
-import logging
-import yaml
 
-from buildfly.actions.basic_action import basic_action
-from buildfly.utils.color_utils import *
+from buildfly.actions.base_action import BaseAction
 from buildfly.config.global_config import G_CONFIG
 
 
-class config_action(basic_action):
+class ConfigAction(BaseAction):
     def parse_args(self, parser):
-        parser.add_argument('name', metavar='name', type=str, nargs = 1,
-                    help="name")
+        parser.add_argument('name', metavar='name', type=str, nargs=1,
+                            help="name")
 
-        parser.add_argument('value', metavar='value', type=str, nargs = "?",
-                    help="value")
+        parser.add_argument('value', metavar='value', type=str, nargs="?",
+                            help="value")
+
     def run(self):
         name = self.args.name[0]
         value = self.args.value
 
-
         if value:
-            G_CONFIG.set_value(name, value, save = True)
+            G_CONFIG.set_value(name, value, save=True)
         else:
             value = G_CONFIG.get_value(name)
             print("%s=%s" % (name, value))
-

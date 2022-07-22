@@ -7,17 +7,20 @@
 # Distributed under terms of the MIT license.
 
 """
+entrypoint of buildfly
 
 """
-from buildfly.args import *
-import importlib
 import logging
-logging.basicConfig(level = logging.INFO,format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+from buildfly.args import *
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
 def main():
     ACTION.run()
+
 
 if __name__ == '__main__':
     main()
