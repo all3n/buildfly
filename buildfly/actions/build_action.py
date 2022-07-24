@@ -10,6 +10,7 @@
 
 """
 import glob
+import os
 import re
 import stat
 
@@ -18,24 +19,92 @@ from buildfly.utils.color_utils import *
 from buildfly.utils.dep_utils import *
 from buildfly.utils.system_utils import *
 from buildfly.utils.yaml_conf_utils import yaml_conf_loader
+from buildfly.env import BENV
+from buildfly.utils.api_utils import BuildFlyAPI, bfly_api_method
+from buildfly.api import *
+from buildfly.common import BFlyRepo, BFlyBin, BFlyLibrary, BFlyDep
 
-CONF_NAME="buildfly.yaml"
+CONF_NAME = "buildfly.yaml"
+CONF_SCRIPT = "bfly_workspace.py"
 COMPILER_PATTERN = re.compile("(\w+)([<=>]{1,2})?([\d\.\w]+)?")
 LIBC_VERSION_PATTERN = re.compile("libc-([\d\.]+)\.so")
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BuildAction(BaseAction):
+
+    def __init__(self) -> None:
+        self.mode = "Debug"
+        self.toolchain = None
+        self.bins = {}
+        self.libs = {}
+        self.deps = {}
+        self.repos = {}
+        self.callbacks = {}
+        self.on_after_build = None
+        self.on_before_build = None
+
     def parse_args(self, parser):
-        parser.add_argument('target', metavar='target', type=str, nargs = "?",
-                    help="build target")
+        parser.add_argument('target', metavar='target', type=str, nargs="?",
+                            help="build target")
 
     def run(self):
         cur_dir = os.path.abspath(sys.path[0])
-        # print("run build action in %s" % (cur_dir))
-        self.parse_build_conf(os.path.join(cur_dir, CONF_NAME))
-        self.check_compiler(self.compiler_info)
-        # self.check_glibc()
-        self.start_build()
+        buildfly_script = os.path.join(cur_dir, CONF_SCRIPT)
+        if os.path.exists(buildfly_script):
+            with BuildFlyAPI(self):
+                with open(buildfly_script, "rb") as f:
+                    exec(f.read())
+                    if self.on_before_build:
+                        self.on_before_build()
+                    self.start_build()
+                    if self.on_after_build:
+                        self.on_after_build()
+
+        else:
+            self.parse_build_conf(os.path.join(cur_dir, CONF_NAME))
+            self.check_compiler(self.compiler_info)
+            # self.check_glibc()
+            self.start_build()
+
+    @bfly_api_method
+    def set_mode(self, mode):
+        self.mode = mode
+
+    @bfly_api_method
+    def set_toolchain(self, toolchain):
+        self.toolchain = toolchain
+
+    @bfly_api_method
+    def add_binary(self, name, **kwargs):
+        assert (name not in self.bins, "%s already exists" % name)
+        self.bins[name] = BFlyBin(**kwargs)
+
+    @bfly_api_method
+    def add_library(self, name, **kwargs):
+        self.libs[name] = BFlyLibrary(**kwargs)
+
+    @bfly_api_method
+    def set_build_dir(self, build_dir):
+        self.build_dir = build_dir
+
+    @bfly_api_method
+    def add_dep(self, name, **kwargs):
+        self.deps[name] = BFlyDep(**kwargs)
+
+    @bfly_api_method
+    def config_repo(self, dep, **kwargs):
+        self.repos[dep] = dict(kwargs)
+
+    @bfly_api_method
+    def before_build(self, fn):
+        setattr(self, "on_before_build", fn)
+
+    @bfly_api_method
+    def after_build(self, fn):
+        setattr(self, "on_after_build", fn)
 
     def parse_build_conf(self, conf_file):
         if not os.path.exists(conf_file):
@@ -53,8 +122,7 @@ class BuildAction(BaseAction):
         self.bins = app_conf.bins
         self.libs = app_conf.libs
 
-
-        compiler = app_conf.args.get('compiler', 'cmake').replace(" ","")
+        compiler = app_conf.args.get('compiler', 'cmake').replace(" ", "")
         self.compiler_info = COMPILER_PATTERN.match(compiler).groups()
 
     def check_glibc(self):
@@ -72,12 +140,10 @@ class BuildAction(BaseAction):
             else:
                 get_glibc(required_libc)
 
-
-
     def check_compiler(self, compiler_info):
         logging.info(green("check compiler info ") + str(compiler_info))
         # check local
-        compiler_name,version_op, version = compiler_info
+        compiler_name, version_op, version = compiler_info
         version_match = False
         if compiler_name == "cmake":
             if check_command_exists(compiler_name):
@@ -106,15 +172,6 @@ class BuildAction(BaseAction):
         else:
             logging.error(red("compiler: version not match %s%s%s" % compiler_info))
 
-
-
-
-
-
-
-
-
-
     def start_build(self):
         self.build_flag = {}
         target = self.args.target
@@ -132,7 +189,6 @@ class BuildAction(BaseAction):
             for name, build_info in self.libs.items():
                 if name not in self.build_flag:
                     self.build_library(name, build_info)
-
 
     def build_dep(self, name, build_info):
         if 'deps' not in build_info:
@@ -154,8 +210,7 @@ class BuildAction(BaseAction):
                         get_dep(app_dep)
 
     def expand_pattern(self, pattern):
-        return glob.glob(pattern, recursive = True)
-
+        return glob.glob(pattern, recursive=True)
 
     def process_dep_options(self, coption, dep_libs):
         dep_options = []
@@ -202,7 +257,7 @@ class BuildAction(BaseAction):
                             static_libs.append(os.path.join(lib_build_dir, "lib%s.a" % (dep)))
                     else:
                         app_dep = self.app_conf.dependency[dep_name]
-                        coption = get_dep_compile_options(app_dep , dep_libs)
+                        coption = get_dep_compile_options(app_dep, dep_libs)
                         dep_options += self.process_dep_options(coption, dep_libs)
                         dep_all_lib_dirs += coption.share_libs_path
 
@@ -210,8 +265,8 @@ class BuildAction(BaseAction):
         include_options = " ".join(["-I%s" % i for i in includes])
         library_path_options = " ".join(["-L%s" % i for i in library_path])
         link_lib_options = " ".join(["-l%s" % i for i in link_library])
-        static_lib_option=" ".join(static_libs)
-        dep_extra_lib_option=" ".join(dep_options)
+        static_lib_option = " ".join(static_libs)
+        dep_extra_lib_option = " ".join(dep_options)
 
         srcs_files = []
         for src in srcs:
@@ -222,15 +277,15 @@ class BuildAction(BaseAction):
         cmds.append("g++ {cflags} {library_path_options} {link_lib_options} \
 {include_options} -o {build_dir}/{target} {srcs} \
 {dep_extra_lib_option} {static_lib_option}".format(
-            target = target,
-            srcs = srcs_options,
-            library_path_options = library_path_options,
-            include_options = include_options,
-            build_dir = bin_dir,
-            cflags = cflags_options,
+            target=target,
+            srcs=srcs_options,
+            library_path_options=library_path_options,
+            include_options=include_options,
+            build_dir=bin_dir,
+            cflags=cflags_options,
             link_lib_options=link_lib_options,
             static_lib_option=static_lib_option,
-            dep_extra_lib_option = dep_extra_lib_option
+            dep_extra_lib_option=dep_extra_lib_option
         ))
 
         for cmd in cmds:
@@ -255,8 +310,6 @@ class BuildAction(BaseAction):
         os.chmod(run_bin_script, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
         logging.info("you can run\n\t%s\nfor test" % red(run_bin_script))
 
-
-
         return True
 
     def build_library(self, name, build_info):
@@ -276,7 +329,7 @@ class BuildAction(BaseAction):
             srcs_files += self.expand_pattern(src)
         srcs_options = " ".join(srcs_files)
         cflags_options = build_info.get('cflags', '')
-        src_names = [i.rsplit(".",1)[0] for i in srcs_files]
+        src_names = [i.rsplit(".", 1)[0] for i in srcs_files]
 
         for sn in src_names:
             object_file = "%s/%s.o" % (lib_dir, sn)
@@ -285,32 +338,31 @@ class BuildAction(BaseAction):
                 os.makedirs(object_file_dir)
             cmds.append("g++ -c {cflags} {include_options} -o {object_file} {srcs}".format(
                 object_file=object_file,
-                srcs = srcs_options,
-                include_options = include_options,
-                cflags = cflags_options
+                srcs=srcs_options,
+                include_options=include_options,
+                cflags=cflags_options
             ))
         lib_type = build_info.get('lib_type', 'shared')
-        lib_objects_option = "".join(["%s/%s.o" % (lib_dir,i) for i in src_names])
+        lib_objects_option = "".join(["%s/%s.o" % (lib_dir, i) for i in src_names])
         if lib_type == 'shared':
-            target_ext='so'
+            target_ext = 'so'
             cmds.append("g++ -shared -fPIC -o {build_dir}/lib{target}.{target_ext} {lib_objects_option}".format(
-                    target=target,
-                    lib_objects_option = lib_objects_option,
-                    target_ext=target_ext,
-                    build_dir=lib_dir
-                ))
+                target=target,
+                lib_objects_option=lib_objects_option,
+                target_ext=target_ext,
+                build_dir=lib_dir
+            ))
         else:
-            target_ext='a'
+            target_ext = 'a'
             cmds.append("ar crv {build_dir}/lib{target}.{target_ext} {lib_objects_option}".format(
-                    target=target,
-                    lib_objects_option = lib_objects_option,
-                    target_ext=target_ext,
-                    build_dir=lib_dir
-                ))
+                target=target,
+                lib_objects_option=lib_objects_option,
+                target_ext=target_ext,
+                build_dir=lib_dir
+            ))
 
         for cmd in cmds:
             logging.info(cyan(cmd))
             os.system(cmd)
 
         return True
-

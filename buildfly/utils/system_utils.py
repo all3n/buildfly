@@ -10,6 +10,8 @@
 
 """
 import os
+from collections import namedtuple
+import glob
 
 
 def check_command_exists(cmd):
@@ -25,3 +27,15 @@ def exec_cmd(cmd):
 
 def get_bfly_path(d):
     return os.path.expanduser("~/.buildfly/%s" % d)
+
+
+def parse_glob_files(f):
+    if type(f) == str:
+        return glob.glob(f, recursive=True)
+    elif type(f) == list:
+        out = []
+        for i in f:
+            out.extend(parse_glob_files(i))
+        return out
+    else:
+        raise RuntimeError("%s glob type not support" % type(f))

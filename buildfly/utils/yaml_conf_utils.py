@@ -240,7 +240,7 @@ class BuildConf(object):
 def yaml_conf_loader(yaml_file):
     with open(yaml_file, "r", encoding='utf-8') as yf:
         try:
-            conf = yaml.load(yf.read())
+            conf = yaml.load(yf.read(), yaml.FullLoader)
         except Exception as e:
             print(e)
             print("yaml load fail")
