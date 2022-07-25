@@ -31,7 +31,10 @@ class CmakeBackend(BaseBackend):
             for cv in cvs:
                 if cv.match(self.cmake_expression):
                     match = True
-                    match_cmake = os.path.join(cmake_dir, str(cv), "bin", 'cmake')
+                    if BENV.is_linux():
+                        match_cmake = os.path.join(cmake_dir, str(cv), "bin", 'cmake')
+                    elif BENV.is_macos():
+                        match_cmake = os.path.join(cmake_dir, str(cv), "CMake.app", "Contents", "bin", 'cmake')
                     break
 
         else:
@@ -39,7 +42,9 @@ class CmakeBackend(BaseBackend):
             match = sv.match(self.cmake_expression)
             if match:
                 match_cmake = 'cmake'
-            logger.info(f"system cmake version {sv} [X]")
+                logger.info(f"system cmake version {sv} [Y]")
+            else:
+                logger.info(f"system cmake version {sv} [X]")
         if match:
             logger.info(f'match cmake: {match_cmake}')
             self.cmake_bin = match_cmake
@@ -57,26 +62,32 @@ class CmakeBackend(BaseBackend):
             f.write("set(CMAKE_CXX_STANDARD 11)\n")
             for name, bin in self.ctx.bins.items():
                 f.write("set(%s_SRCS %s)\n" % (name, " ".join(bin.get_all_srcs())))
-            f.write("add_executable(%s ${%s_SRCS})\n" % (name, name))
+                f.write("set(%s_INCLUDES %s)\n" % (name, " ".join(bin.includes)))
+                f.write("add_executable(%s ${%s_SRCS})\n" % (name, name))
+                f.write("target_include_directories(%s PUBLIC ${%s_INCLUDES})" % (name, name))
+
 
     def build(self):
         cur_dir = os.path.abspath(sys.path[0])
         build_dir = os.path.join(cur_dir, "build")
         if not os.path.exists(build_dir):
             os.makedirs(build_dir)
-        cmd = f"cd {build_dir}; cmake ..;make -j$(nproc)"
+        cmd = f"cd {build_dir}; %s ..;make -j$(nproc)" % (self.cmake_bin)
         os.system(cmd)
 
     def install_cmake(self):
         releases = api_client.list_releases("Kitware", "CMake")
         cmake_version = None
         cmake_assets = None
+        print(releases)
         for rv, assets in releases:
             sv = semver.VersionInfo.parse(rv.replace("v", ""))
             if sv.match(self.cmake_expression):
                 cmake_version = rv
                 cmake_assets = assets
                 break
+        if cmake_version is None:
+            return False
         logger.info(f"try install {cmake_version}")
         if BENV.is_linux():
             os_pattern = "linux-x86_64.tar.gz"
@@ -98,3 +109,9 @@ class CmakeBackend(BaseBackend):
             download_http_pkg(asset_url, tmp_file_path)
             cmd = f"tar --strip-components=1 -zxvf {tmp_file_path} -C {cmake_version_dir}"
             exec_cmd(cmd)
+            if BENV.is_linux():
+                self.cmake_bin = os.path.join(cmake_version_dir, "bin", "cmake")
+            elif BENV.is_macos():
+                self.cmake_bin = os.path.join(cmake_version_dir, "CMake.app", "Contents", "bin", "cmake")
+            return True
+        return False

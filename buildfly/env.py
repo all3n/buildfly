@@ -39,7 +39,7 @@ class BuildFlyEnv(object):
         return self.system == "linux"
 
     def is_macos(self):
-        return self.system == "Darwin"
+        return self.system == "darwin"
 
     def detect_compiler(self):
         if self.is_macos():
