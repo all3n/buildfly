@@ -24,6 +24,14 @@ class github_api(object):
     def api_request(self, url):
         return requests.get(url, proxies=proxy)
 
+    def list_releases(self, owner, repo):
+        api = "%s/repos/%s/%s/releases" % (GITHUB_API_V3, owner, repo)
+        res = self.api_request(api)
+        if res.status_code == 200:
+            repo_relases_info = json.loads(res.text)
+            return [(r['tag_name'], r["assets"]) for r in repo_relases_info]
+        return None
+
     # GET /repos/:owner/:repo/tags
     def list_tags(self, owner, repo):
         api = "%s/repos/%s/%s/tags" % (GITHUB_API_V3, owner, repo)

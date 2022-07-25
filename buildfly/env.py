@@ -13,8 +13,11 @@ import logging
 import platform
 from buildfly.utils.system_utils import exec_cmd
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-class BuildFlyEnv():
+
+
+class BuildFlyEnv(object):
     def __init__(self):
         # ('glibc', '2.29')
         self.libc_ver = platform.libc_ver()
@@ -55,8 +58,9 @@ class BuildFlyEnv():
             logger.info("gcc version %s" % self.gcc_version)
 
     def detect_cmake(self):
+        logger.info("detect cmake")
         if self.is_linux() or self.is_macos():
-            cmake_v = exec_cmd("cmake -v 2>&1|grep 'cmake version'")
+            cmake_v = exec_cmd("cmake --version 2>&1|grep 'cmake version'")
             if cmake_v:
                 self.cmake_version = cmake_v.split(" ")[2]
             else:

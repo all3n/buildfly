@@ -1,3 +1,6 @@
+import glob
+
+
 class BFlyRepo(object):
     pass
 
@@ -47,6 +50,15 @@ class BFlyTarget(object):
     def init(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    def get_all_srcs(self):
+        srcs = []
+        if type(self.srcs) == str:
+            srcs.extend(glob.glob(self.srcs, recursive=True))
+        else:
+            for src in self.srcs:
+                srcs.extend(glob.glob(src, recursive=True))
+        return srcs
 
     def __repr__(self):
         return "[%s][%s]{%s}" % (self.__class__.__name__, self.name, str(self.__dict__))

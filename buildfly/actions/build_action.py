@@ -18,10 +18,9 @@ from buildfly.actions.base_action import BaseAction
 from buildfly.utils.color_utils import *
 from buildfly.utils.dep_utils import *
 from buildfly.utils.system_utils import *
+from buildfly.backend import *
 from buildfly.utils.yaml_conf_utils import yaml_conf_loader
-from buildfly.env import BENV
 from buildfly.utils.api_utils import BuildFlyAPI, bfly_api_method
-from buildfly.api import *
 from buildfly.common import BFlyRepo, BFlyBin, BFlyLibrary, BFlyDep
 
 CONF_NAME = "buildfly.yaml"
@@ -36,6 +35,7 @@ logger = logging.getLogger(__name__)
 class BuildAction(BaseAction):
 
     def __init__(self) -> None:
+        self.build_dir = self.get_cur_file('build')
         self.mode = "Debug"
         self.toolchain = None
         self.bins = {}
@@ -43,6 +43,8 @@ class BuildAction(BaseAction):
         self.deps = {}
         self.repos = {}
         self.callbacks = {}
+        # cmake/makefile/ninja
+        self.backend = None
         self.on_after_build = None
         self.on_before_build = None
 
@@ -56,11 +58,19 @@ class BuildAction(BaseAction):
         if os.path.exists(buildfly_script):
             with BuildFlyAPI(self):
                 with open(buildfly_script, "rb") as f:
-                    exec(f.read())
+                    exec("from buildfly.api import *\n" + f.read().decode("utf-8"))
+                    if self.backend is None:
+                        self.backend = CmakeBackend(self)
+                    self.backend.setup()
                     if self.on_before_build:
+                        logger.info("before build")
                         self.on_before_build()
-                    self.start_build()
+                    logger.info("start build")
+                    self.backend.generate()
+                    self.backend.build()
+                    # self.start_build()
                     if self.on_after_build:
+                        logger.info("after build")
                         self.on_after_build()
 
         else:
@@ -68,6 +78,25 @@ class BuildAction(BaseAction):
             self.check_compiler(self.compiler_info)
             # self.check_glibc()
             self.start_build()
+
+    @bfly_api_method
+    def set(self, name, value):
+        setattr(self, name, value)
+
+    @bfly_api_method
+    def get(self, name):
+        return getattr(self, name)
+
+    @bfly_api_method
+    def set_backend(self, backend):
+        if backend == "cmake":
+            self.backend = CmakeBackend(self)
+        elif backend == 'makefile':
+            self.backend = MakefileBackend(self)
+        elif backend == "ninja":
+            self.backend = NinjaBackend(self)
+        else:
+            raise RuntimeError(f"{backend} backend not support")
 
     @bfly_api_method
     def set_mode(self, mode):
@@ -79,7 +108,6 @@ class BuildAction(BaseAction):
 
     @bfly_api_method
     def add_binary(self, name, **kwargs):
-        assert (name not in self.bins, "%s already exists" % name)
         self.bins[name] = BFlyBin(**kwargs)
 
     @bfly_api_method
@@ -175,6 +203,7 @@ class BuildAction(BaseAction):
     def start_build(self):
         self.build_flag = {}
         target = self.args.target
+        logger.info(f"build target {target}")
 
         if target:
             if target in self.bins:
@@ -184,6 +213,7 @@ class BuildAction(BaseAction):
 
         else:
             for name, build_info in self.bins.items():
+                logger.info(f"build bin {name}, {build_info}")
                 self.build_bin(name, build_info)
 
             for name, build_info in self.libs.items():
@@ -221,7 +251,12 @@ class BuildAction(BaseAction):
             dep_options.append(coption.libs_other)
         return dep_options
 
-    def build_bin(self, name, build_info):
+    def build_bin(self, name, bin):
+        logger.info(f"{name}")
+
+        pass
+
+    def build_bin2(self, name, build_info):
         bin_dir = os.path.join(self.build_dir, "build-bin-%s" % name)
         if not os.path.exists(bin_dir):
             os.makedirs(bin_dir)

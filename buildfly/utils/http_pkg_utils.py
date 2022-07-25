@@ -55,6 +55,10 @@ def download_http_pkg(url, tmp_pkg_file):
     if not os.path.exists(pkg_base_dir):
         os.makedirs(pkg_base_dir)
 
+    github_mirror = G_CONFIG.get_value("github.mirror")
+    if github_mirror:
+        url = url.replace("github.com", github_mirror)
+
     proxy = G_CONFIG.get_value("proxy")
     res = requests.get(url, stream=True, headers={'Accept-Encoding': None}, proxies=proxy)
     try:
@@ -85,5 +89,5 @@ if __name__ == '__main__':
     code_dir = os.path.expanduser("~/.buildfly/src/github.com/protocolbuffers/protobuf/3.7.0rc1")
     url = "https://codeload.github.com/google/googletest/tar.gz/release-1.8.1"
     # url = "https://codeload.github.com/protocolbuffers/protobuf/legacy.tar.gz/v3.7.0rc1"
-    donwload_http_pkg(url, tmp_file)
+    download_http_pkg(url, tmp_file)
     uncompress_tar_gz(code_dir, tmp_file)

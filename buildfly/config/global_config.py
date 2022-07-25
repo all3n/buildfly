@@ -22,11 +22,11 @@ class GlobalConfig(object):
         self.f = f
         if os.path.exists(f):
             with open(f, "r") as cf:
-                self.sys_config = yaml.load(cf)
+                self.sys_config = yaml.load(cf, yaml.FullLoader)
                 if not self.sys_config:
                     self.sys_config = {}
 
-    def set_value(self, name, value, save=False):
+    def set_value(self, name, value, save=False, entire=False):
         # set value
         name_fields = name.split(".")
 
@@ -42,7 +42,20 @@ class GlobalConfig(object):
         if type(fv) != dict:
             print("%s type must be dict: current is %s" % (name, type(fv)))
             sys.exit(-1)
-        fv[last_field] = value
+        if '[' in value or '{' in value:
+            value = eval(value)
+        else:
+            value = str(value)
+        if not entire and type(value) == dict:
+            print("partial update %s" % name)
+            if last_field in fv:
+                fv[last_field].update(value)
+            else:
+                fv[last_field] = value
+        else:
+            print("update %s" % last_field)
+            fv[last_field] = value
+
         print("set %s : %s" % (name, value))
         if save:
             self.save()
