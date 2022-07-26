@@ -22,6 +22,7 @@ from buildfly.backend import *
 from buildfly.utils.yaml_conf_utils import yaml_conf_loader
 from buildfly.utils.api_utils import BuildFlyAPI, bfly_api_method
 from buildfly.common import BFlyRepo, BFlyBin, BFlyLibrary, BFlyDep
+from buildfly.utils.string_utils import camelize
 
 CONF_NAME = "buildfly.yaml"
 CONF_SCRIPT = "bfly_workspace.py"
@@ -35,6 +36,7 @@ logger = logging.getLogger(__name__)
 class BuildAction(BaseAction):
 
     def __init__(self) -> None:
+        self.backend_instance = None
         self.build_dir = self.get_cur_file('build')
         self.mode = "Debug"
         self.toolchain = None
@@ -44,7 +46,7 @@ class BuildAction(BaseAction):
         self.repos = {}
         self.callbacks = {}
         # cmake/makefile/ninja
-        self.backend = None
+        self.backend = "cmake"
         self.on_after_build = None
         self.on_before_build = None
 
@@ -59,15 +61,15 @@ class BuildAction(BaseAction):
             with BuildFlyAPI(self):
                 with open(buildfly_script, "rb") as f:
                     exec("from buildfly.api import *\n" + f.read().decode("utf-8"))
-                    if self.backend is None:
-                        self.backend = CmakeBackend(self)
-                    self.backend.setup()
+                    backend_cls = eval(camelize(self.backend) + "Backend")
+                    self.backend_instance = backend_cls(self)
+                    self.backend_instance.setup()
                     if self.on_before_build:
                         logger.info("before build")
                         self.on_before_build()
                     logger.info("start build")
-                    self.backend.generate()
-                    self.backend.build()
+                    self.backend_instance.generate()
+                    self.backend_instance.build()
                     # self.start_build()
                     if self.on_after_build:
                         logger.info("after build")
@@ -84,19 +86,12 @@ class BuildAction(BaseAction):
         setattr(self, name, value)
 
     @bfly_api_method
-    def get(self, name):
-        return getattr(self, name)
+    def get(self, name, def_val=None):
+        return getattr(self, name, def_val)
 
     @bfly_api_method
     def set_backend(self, backend):
-        if backend == "cmake":
-            self.backend = CmakeBackend(self)
-        elif backend == 'makefile':
-            self.backend = MakefileBackend(self)
-        elif backend == "ninja":
-            self.backend = NinjaBackend(self)
-        else:
-            raise RuntimeError(f"{backend} backend not support")
+        self.backend = backend
 
     @bfly_api_method
     def set_mode(self, mode):

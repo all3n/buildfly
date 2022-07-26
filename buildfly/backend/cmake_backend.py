@@ -17,39 +17,34 @@ class CmakeBackend(BaseBackend):
     def __init__(self, ctx):
         super().__init__(ctx)
         self.name = "cmake"
+        self.cmake_expression = self.ctx.get('cmake_version')
         self.cmake_bin = "cmake"
+        self.cmake_generator = self.ctx.get('cmake_generator', 'make').lower()
 
     def setup(self):
-        self.cmake_expression = self.ctx.get('cmake_version')
-        cmake_dir = get_bfly_path("tools/cmake")
-        match = False
-        match_cmake = None
-        if os.path.exists(cmake_dir):
-            cmake_vers = os.listdir(cmake_dir)
-            cvs = sorted(list(map(semver.VersionInfo.parse, cmake_vers)), reverse=True)
+        self.cmake_bin = self.install_tool_if_required("cmake", "Kitware/CMake", self.cmake_expression, "cmake",
+                                                       getattr(BENV, "cmake_version"),
+                                                       pkg_os_pattern={
+                                                           "linux": "linux-x86_64.tar.gz",
+                                                           "darwin": "macos-universal.tar.gz"
+                                                       }, bin_path={
+                "linux": "bin/cmake",
+                "darwin": "CMake.app/Contents/bin/cmake"
+            })
+        if self.cmake_generator == "ninja":
+            self.ninja_bin = self.install_tool_if_required("ninja", "ninja-build/ninja",
+                                                           self.ctx.get("ninja_version", "latest"),
+                                                           "ninja",
+                                                           None,
+                                                           pkg_os_pattern={
+                                                               "linux": "linux.zip",
+                                                               "darwin": "mac.zip"
+                                                           }, bin_path={
+                    "linux": "ninja",
+                    "darwin": "ninja"
+                })
 
-            for cv in cvs:
-                if cv.match(self.cmake_expression):
-                    match = True
-                    if BENV.is_linux():
-                        match_cmake = os.path.join(cmake_dir, str(cv), "bin", 'cmake')
-                    elif BENV.is_macos():
-                        match_cmake = os.path.join(cmake_dir, str(cv), "CMake.app", "Contents", "bin", 'cmake')
-                    break
 
-        else:
-            sv = semver.VersionInfo.parse(BENV.cmake_version)
-            match = sv.match(self.cmake_expression)
-            if match:
-                match_cmake = 'cmake'
-                logger.info(f"system cmake version {sv} [Y]")
-            else:
-                logger.info(f"system cmake version {sv} [X]")
-        if match:
-            logger.info(f'match cmake: {match_cmake}')
-            self.cmake_bin = match_cmake
-        if not match:
-            self.install_cmake()
 
     def generate(self):
         cur_dir = os.path.abspath(sys.path[0])
@@ -66,52 +61,15 @@ class CmakeBackend(BaseBackend):
                 f.write("add_executable(%s ${%s_SRCS})\n" % (name, name))
                 f.write("target_include_directories(%s PUBLIC ${%s_INCLUDES})" % (name, name))
 
-
     def build(self):
         cur_dir = os.path.abspath(sys.path[0])
         build_dir = os.path.join(cur_dir, "build")
         if not os.path.exists(build_dir):
             os.makedirs(build_dir)
-        cmd = f"cd {build_dir}; %s ..;make -j$(nproc)" % (self.cmake_bin)
+        if self.cmake_generator == "make":
+            cmd = f"cd {build_dir}; %s ..;make -j$(nproc)" % (self.cmake_bin)
+        elif self.cmake_generator == "ninja":
+            cmd = f"cd {build_dir}; PATH=%s:$PATH %s -GNinja ..;%s -j$(nproc)" % (os.path.dirname(self.ninja_bin), self.cmake_bin, self.ninja_bin)
+            print(cmd)
         os.system(cmd)
 
-    def install_cmake(self):
-        releases = api_client.list_releases("Kitware", "CMake")
-        cmake_version = None
-        cmake_assets = None
-        print(releases)
-        for rv, assets in releases:
-            sv = semver.VersionInfo.parse(rv.replace("v", ""))
-            if sv.match(self.cmake_expression):
-                cmake_version = rv
-                cmake_assets = assets
-                break
-        if cmake_version is None:
-            return False
-        logger.info(f"try install {cmake_version}")
-        if BENV.is_linux():
-            os_pattern = "linux-x86_64.tar.gz"
-        elif BENV.is_macos():
-            os_pattern = "macos-universal.tar.gz"
-        asset_urls = [ast["browser_download_url"] for ast in cmake_assets if os_pattern in ast["name"]]
-        logger.info(f"{asset_urls}")
-        if asset_urls:
-            cmake_version_dir = get_bfly_path("tools/cmake/%s/" % str(cmake_version.replace("v", "")))
-            if not os.path.exists(cmake_version_dir):
-                os.makedirs(cmake_version_dir)
-
-            tmp_file = tempfile.NamedTemporaryFile(prefix=cmake_version, suffix=".tar.gz")
-            # use first
-            # TODO
-            asset_url = asset_urls[0]
-            logger.info("Download Release %s " % asset_url)
-            tmp_file_path = tmp_file.name
-            download_http_pkg(asset_url, tmp_file_path)
-            cmd = f"tar --strip-components=1 -zxvf {tmp_file_path} -C {cmake_version_dir}"
-            exec_cmd(cmd)
-            if BENV.is_linux():
-                self.cmake_bin = os.path.join(cmake_version_dir, "bin", "cmake")
-            elif BENV.is_macos():
-                self.cmake_bin = os.path.join(cmake_version_dir, "CMake.app", "Contents", "bin", "cmake")
-            return True
-        return False
