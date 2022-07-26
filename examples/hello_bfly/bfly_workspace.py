@@ -9,8 +9,11 @@ set_backend("cmake")
 add_binary(
     "main",
     srcs = ["src/**/*.cpp"],
-    includes = ["include"]
+    includes = ["include"],
+    deps = ["glog"]
 )
 
 
 
+add_dep("glog", "google/glog")
+add_dep("jsoncpp", "open-source-parsers/jsoncpp")

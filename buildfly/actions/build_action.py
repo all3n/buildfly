@@ -64,6 +64,7 @@ class BuildAction(BaseAction):
                     backend_cls = eval(camelize(self.backend) + "Backend")
                     self.backend_instance = backend_cls(self)
                     self.backend_instance.setup()
+                    self.install_deps()
                     if self.on_before_build:
                         logger.info("before build")
                         self.on_before_build()
@@ -114,7 +115,8 @@ class BuildAction(BaseAction):
         self.build_dir = build_dir
 
     @bfly_api_method
-    def add_dep(self, name, **kwargs):
+    def add_dep(self, name, artifact_id = None, **kwargs):
+        kwargs.update({"name": name, "artifact_id": artifact_id})
         self.deps[name] = BFlyDep(**kwargs)
 
     @bfly_api_method
@@ -396,3 +398,7 @@ class BuildAction(BaseAction):
             os.system(cmd)
 
         return True
+
+    def install_deps(self):
+        for name, dep in self.deps.items():
+            dep.install_if_needed()
