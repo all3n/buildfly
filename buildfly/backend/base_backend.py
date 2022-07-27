@@ -31,7 +31,7 @@ class BaseBackend(object):
         if tool_bin:
             return tool_bin
         else:
-            self.install_tools(name, github, tool_version_expression, pkg_os_pattern, bin_path)
+            return self.install_tools(name, github, tool_version_expression, pkg_os_pattern, bin_path)
 
     def check_tool_exists(self, name, tool_version_expression, env_bin=None, bin_ver=None, bin_path={}):
         tool_dir = get_bfly_path("tools/%s" % name)

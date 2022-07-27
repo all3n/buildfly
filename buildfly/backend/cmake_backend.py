@@ -60,6 +60,8 @@ class CmakeBackend(BaseBackend):
                 f.write("set(%s_INCLUDES %s)\n" % (name, " ".join(bin.includes)))
                 f.write("add_executable(%s ${%s_SRCS})\n" % (name, name))
                 f.write("target_include_directories(%s PUBLIC ${%s_INCLUDES})" % (name, name))
+                for dep in bin.deps:
+                    print(dep, self.ctx.deps[dep])
 
     def build(self):
         cur_dir = os.path.abspath(sys.path[0])
