@@ -12,7 +12,7 @@
 import logging
 import sys
 from collections import namedtuple
-
+# from buildfly.utils.yaml_conf_utils import BuildDependency
 from buildfly.build.build_manager import BuildManager
 from buildfly.utils.compress_utils import *
 from buildfly.utils.github_api_utils import api_client
@@ -38,8 +38,8 @@ def get_dep(app_dep):
             print("%s exists in %s" % (app_dep.name, install_dir))
             return
         lib_type = lib_info["type"]
+        repo_dir_path = app_dep.get_repo_dir()
         if lib_type == "github":
-            repo_dir_path = app_dep.get_repo_dir()
             process_github_lib(app_dep, repo_dir_path)
             code_dir = app_dep.get_code_dir()
         elif lib_type == "git":
@@ -60,7 +60,22 @@ def get_dep(app_dep):
     bm.build(app_dep)
     if app_dep.modules:
         app_dep.save_modules()
+    bm.write_manifest(app_dep)
 
+def check_if_needed(bdep):
+    if bdep.repo == "github":
+        dep_obj = None
+        if bdep.repo == "github" and bdep.artifact_id:
+            dep_obj = f"{bdep.artifact_id}@{bdep.version}" if bdep.version else f"{bdep.artifact_id}"
+        elif bdep.url:
+            dep_obj = {}
+            if bdep.modules:
+                dep_obj['modules'] = bdep.modules
+                dep_obj["cmds"] = bdep.cmds
+                dep_obj["url"] = bdep.url
+        return bdep.name, dep_obj
+    else:
+        return None
 
 def detact_lib_type(libdesc):
     # github.com

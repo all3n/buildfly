@@ -13,13 +13,14 @@ import glob
 import os
 import re
 import stat
+import sys
 
 from buildfly.actions.base_action import BaseAction
 from buildfly.utils.color_utils import *
-from buildfly.utils.dep_utils import *
+from buildfly.utils.dep_utils import get_dep, get_glibc,get_dep_compile_options, check_if_needed
 from buildfly.utils.system_utils import *
 from buildfly.backend import *
-from buildfly.utils.yaml_conf_utils import yaml_conf_loader
+from buildfly.utils.yaml_conf_utils import yaml_conf_loader, BuildDependency
 from buildfly.utils.api_utils import BuildFlyAPI, bfly_api_method
 from buildfly.common import BFlyRepo, BFlyBin, BFlyLibrary, BFlyDep
 from buildfly.utils.string_utils import camelize
@@ -401,4 +402,8 @@ class BuildAction(BaseAction):
 
     def install_deps(self):
         for name, dep in self.deps.items():
-            dep.install_if_needed()
+            x = check_if_needed(dep)
+            if x:
+                name, dep = x
+                bd = BuildDependency(name, dep_obj=dep)
+                get_dep(bd)

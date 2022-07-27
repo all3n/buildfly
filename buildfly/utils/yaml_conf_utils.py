@@ -12,12 +12,12 @@
 import hashlib
 import os
 import sys
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 import yaml
 from six.moves.urllib_parse import urlparse
 
-from buildfly.utils.dep_utils import *
+from buildfly.utils.dep_utils import detact_lib_type
 from buildfly.utils.system_utils import get_bfly_path
 
 TargetDep = namedtuple('TargetDep', ['name', 'libdesc', 'link_type', 'lib_name'])
@@ -38,7 +38,6 @@ class BuildDependency(object):
     _code_dir = None
 
     def __init__(self, name, dep_obj):
-        print(dep_obj)
         self.name = name
         if type(dep_obj) == str:
             self.libdesc = dep_obj

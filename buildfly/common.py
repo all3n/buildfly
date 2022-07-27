@@ -1,6 +1,5 @@
 import glob
-from buildfly.utils.yaml_conf_utils import BuildDependency
-from buildfly.utils.dep_utils import get_dep
+
 
 class BFlyRepo(object):
     pass
@@ -18,8 +17,43 @@ class BFlyLocalRepo(BFlyRepo):
     pass
 
 
+import json
+
+
+class BFlyManifest(object):
+    def __init__(self, name=None, mode=None, repo={}, version=None, description=None, envs={}, configs={},
+                 vars={}, arch=None, system=None, prefix=None, libc_version=None):
+        self.name = name
+        self.mode = mode
+        self.repo = repo  # name, url, branch, commit, tag
+        self.version = version
+        self.description = description
+        self.envs = envs
+        self.configs = configs
+        self.vars = vars
+        self.arch = arch
+        self.system = system
+        self.prefix = prefix
+        self.libc_version = libc_version
+
+    def to_json(self, indent=4):
+        return json.dumps(self.__dict__, indent=indent)
+
+    @staticmethod
+    def from_dict(v):
+        bm = BFlyManifest()
+        bm.__dict__ = v
+        return bm
+
+    @staticmethod
+    def from_json(v):
+        bm = BFlyManifest()
+        bm.__dict__ = json.loads(v)
+        return bm
+
+
 class BFlyDep(object):
-    def __init__(self, name, artifact_id = None, repo="github", url = None, version=None, cmds=[], modules=[], sha256=None):
+    def __init__(self, name, artifact_id=None, repo="github", url=None, version=None, cmds=[], modules=[], sha256=None):
         """
         repo:
             github
@@ -32,21 +66,6 @@ class BFlyDep(object):
         self.version = version
         self.cmds = []
         self.modules = modules
-
-    def install_if_needed(self):
-        if self.repo == "github":
-            dep_obj = None
-            if self.repo == "github" and self.artifact_id:
-                dep_obj = f"{self.artifact_id}@{self.version}" if self.version else f"{self.artifact_id}"
-            elif self.url:
-                dep_obj = {}
-                if self.modules:
-                    dep_obj['modules'] = self.modules
-                    dep_obj["cmds"] = self.cmds
-                    dep_obj["url"] = self.url
-            bdep = BuildDependency(self.name, dep_obj=dep_obj)
-            get_dep(bdep)
-
 
 
 class BFlyTarget(object):

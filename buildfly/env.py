@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class BuildFlyEnv(object):
     def __init__(self):
         # ('glibc', '2.29')
-        self.libc_ver = platform.libc_ver()
+        self.libc_ver = platform.libc_ver()[1]
         # x86_64
         self.machine = platform.machine()
         # only work in mac
