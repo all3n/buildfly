@@ -77,3 +77,10 @@ buildfly 是c++基于github管理包管理编译工具.
 [Y] cmake ninja generate
 [ ] docker support
 [Y] global config
+
+
+## update cpp name repo
+```
+curl https://raw.githubusercontent.com/fffaraz/awesome-cpp/master/README.md|grep -P -o "https://github.com/\w+/\w+" |sort|uniq|awk -F '/' 'BEGIN{printf("repo_list = {\n")}{printf("\t\"%s\": \"%s/%s\",\n", tolower($NF),$4,$5)}END{printf("}")}' > ~/workspaces/buildfly/buildfly/config/repo_list.py
+
+```

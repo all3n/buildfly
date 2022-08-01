@@ -75,6 +75,6 @@ class BuildManager(object):
                 if pcf.has(f):
                     meta[alias] = pcf.get(name)
 
-        with open(os.path.join(install_dir, "manifest.json"), "w") as f:
-            bm = BFlyManifest.from_dict(meta)
-            f.write(bm.to_json())
+        # with open(os.path.join(install_dir, "manifest.json"), "w") as f:
+        #     bm = BFlyManifest.from_dict(meta)
+        #     f.write(bm.to_json())

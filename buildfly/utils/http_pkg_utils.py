@@ -15,6 +15,8 @@ import requests
 
 from buildfly.config.global_config import G_CONFIG
 from buildfly.utils.compress_utils import *
+import logging
+logger = logging.getLogger(__name__)
 
 
 def format_size(bytes):
@@ -56,6 +58,8 @@ def download_http_pkg(url, tmp_pkg_file):
         os.makedirs(pkg_base_dir)
 
     github_mirror = G_CONFIG.get_value("github.mirror")
+
+    logger.info(f"download {url}")
     if github_mirror:
         url = url.replace("github.com", github_mirror)
 

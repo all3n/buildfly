@@ -57,7 +57,7 @@ setup(name='buildfly',
       ],
       entry_points={
           'console_scripts': [
-              'bfly=buildfly.__main__'
+              'bfly=buildfly.__main__:main'
           ]
       },
       packages=find_packages("."),
