@@ -11,16 +11,21 @@
 """
 import logging
 import platform
+import re
+import sys
+
+import semver
+
 from buildfly.utils.system_utils import exec_cmd
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+LIBC_VERSION_PATTERN = re.compile("libc-([\d\.]+)\.so")
 
 
 class BuildFlyEnv(object):
     def __init__(self):
-        # ('glibc', '2.29')
-        self.libc_ver = platform.libc_ver()[1]
+        self.libc_version = None
         # x86_64
         self.machine = platform.machine()
         # only work in mac
@@ -32,6 +37,8 @@ class BuildFlyEnv(object):
         # Linux
         self.system = platform.system().lower()
 
+        self.detect()
+
     def is_windows(self):
         return self.system == "windows"
 
@@ -40,6 +47,19 @@ class BuildFlyEnv(object):
 
     def is_macos(self):
         return self.system == "darwin"
+
+    def check_glibc(self):
+        if self.is_linux():
+            libc_so_file = exec_cmd("readlink -f `ldconfig -p|grep libc.so.6|head -n 1|awk -F\"=> \" '{print $2}'`")
+            version_match = LIBC_VERSION_PATTERN.search(libc_so_file)
+            if version_match:
+                libc_version = version_match.group(1)
+                libc_vers = libc_version.split(".")
+                if len(libc_vers) == 2:
+                    libc_vers.append(0)
+                self.libc_version = semver.VersionInfo(*libc_vers)
+                logger.info("libc version:%s" % self.libc_version)
+
 
     def detect_compiler(self):
         if self.is_macos():
@@ -68,9 +88,9 @@ class BuildFlyEnv(object):
             logger.info("cmake version %s" % self.cmake_version)
 
     def detect(self):
+        self.check_glibc()
         self.detect_compiler()
         self.detect_cmake()
 
 
 BENV = BuildFlyEnv()
-BENV.detect()

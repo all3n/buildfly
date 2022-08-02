@@ -16,20 +16,33 @@ from buildfly.utils.string_utils import camelize
 from buildfly.common import BFlyManifest
 from buildfly.env import BENV
 from buildfly.config.pkg_config import PkgConfigFile
+from buildfly.utils.system_utils import get_bfly_path, exec_cmd
+import shutil
 
 
 class BuildManager(object):
     def __init__(self):
-        pass
+        self.pkg_dir = get_bfly_path("pkgs")
+
+    def get_pkg_file(self, name):
+        return os.path.join(self.pkg_dir, name)
 
     def build(self, app_dep):
         code_dir = app_dep.get_code_dir()
         install_dir = app_dep.get_install_dir()
+        pkg_script_file = self.get_pkg_file(app_dep.name + ".sh")
+        print(pkg_script_file)
+        if os.path.exists(pkg_script_file):
+            build_script = os.path.join(code_dir, 'bfly_build_script.sh')
+            shutil.copyfile(pkg_script_file, build_script)
+            cmd = f"cd {code_dir};INSTALL_PREFIX={install_dir} bash {build_script}"
+            exec_cmd(cmd)
         cmds = app_dep.cmds
         if cmds:
             build_type = 'custom'
         else:
             build_type = self.detact_build_type(code_dir)
+
         build_class = build_type + "_build"
         build_module = importlib.import_module("buildfly.build." + build_class)
         build_obj = getattr(build_module, camelize(build_class))()
@@ -66,7 +79,7 @@ class BuildManager(object):
             "prefix": install_dir,
             "system": BENV.system,
             "arch": BENV.machine,
-            "libc_version": BENV.libc_ver
+            "libc_version": BENV.libc_version
         }
         if pcf:
             fields = ['includedir', 'libdir', 'version', 'description', 'libs', 'cflags', 'exec_prefix:bin_path']
