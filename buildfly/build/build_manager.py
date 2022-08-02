@@ -37,16 +37,17 @@ class BuildManager(object):
             shutil.copyfile(pkg_script_file, build_script)
             cmd = f"cd {code_dir};INSTALL_PREFIX={install_dir} bash {build_script}"
             exec_cmd(cmd)
-        cmds = app_dep.cmds
-        if cmds:
-            build_type = 'custom'
         else:
-            build_type = self.detact_build_type(code_dir)
+            cmds = app_dep.cmds
+            if cmds:
+                build_type = 'custom'
+            else:
+                build_type = self.detact_build_type(code_dir)
 
-        build_class = build_type + "_build"
-        build_module = importlib.import_module("buildfly.build." + build_class)
-        build_obj = getattr(build_module, camelize(build_class))()
-        build_obj.build(app_dep, code_dir, install_dir)
+            build_class = build_type + "_build"
+            build_module = importlib.import_module("buildfly.build." + build_class)
+            build_obj = getattr(build_module, camelize(build_class))()
+            build_obj.build(app_dep, code_dir, install_dir)
 
     def detact_build_type(self, code_dir):
         code_files = os.listdir(code_dir)
