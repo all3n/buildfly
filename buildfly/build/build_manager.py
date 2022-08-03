@@ -19,6 +19,8 @@ from buildfly.config.pkg_config import PkgConfigFile
 from buildfly.utils.system_utils import get_bfly_path, exec_cmd
 import shutil
 
+import logging
+logger = logging.getLogger(__name__)
 
 class BuildManager(object):
     def __init__(self):
@@ -36,7 +38,8 @@ class BuildManager(object):
             build_script = os.path.join(code_dir, 'bfly_build_script.sh')
             shutil.copyfile(pkg_script_file, build_script)
             cmd = f"cd {code_dir};INSTALL_PREFIX={install_dir} bash {build_script}"
-            exec_cmd(cmd)
+            logger.info(cmd)
+            os.system(cmd)
         else:
             cmds = app_dep.cmds
             if cmds:

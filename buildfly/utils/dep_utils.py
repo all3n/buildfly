@@ -14,6 +14,7 @@ import sys
 from collections import namedtuple
 # from buildfly.utils.yaml_conf_utils import BuildDependency
 from buildfly.build.build_manager import BuildManager
+from buildfly.config.global_config import G_CONFIG
 from buildfly.utils.compress_utils import *
 from buildfly.utils.github_api_utils import api_client
 from buildfly.utils.http_pkg_utils import download_http_pkg
@@ -62,6 +63,7 @@ def get_dep(app_dep):
         app_dep.save_modules()
     bm.write_manifest(app_dep)
 
+
 def check_if_needed(bdep):
     if bdep.repo == "github":
         dep_obj = None
@@ -76,6 +78,7 @@ def check_if_needed(bdep):
         return bdep.name, dep_obj
     else:
         return None
+
 
 def detact_lib_type(libdesc):
     # github.com
@@ -102,12 +105,15 @@ def detact_lib_type(libdesc):
                 lib_info["repo_info"] = ["tag", repo_tag]
                 lib_info['url'] = "https://github.com/%s/%s/tree/%s" % (owner, repo_name, repo_tag)
                 tags_info = api_client.list_tags(owner, repo_name)
+                # print(tags_info)
                 if repo_tag in tags_info:
                     tag_info = tags_info[repo_tag]
-                    # print(tag_info)
-                    tarball_url = tag_info["tarball_url"]
-                    lib_info['tarball_url'] = tarball_url
+                    if G_CONFIG.get_value("github.mirror") == "fastgit":
+                        lib_info["tarball_url"] = f"https://archive.fastgit.org/{owner}/{repo_name}/archive/{tag_info['name']}.tar.gz"
+                    else:
+                        lib_info["tarball_url"] = f"https://github.com/{owner}/{repo_name}/archive/refs/heads/{tag_info['name']}.tar.gz"
                     lib_info['commit'] = tag_info["commit"]
+                    print(lib_info)
                 else:
                     print("%s tag is not valid" % repo_tag)
                     print("tag list: %s" % (list(tags_info.keys())))

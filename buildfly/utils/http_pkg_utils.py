@@ -60,8 +60,8 @@ def download_http_pkg(url, tmp_pkg_file):
     github_mirror = G_CONFIG.get_value("github.mirror")
 
     logger.info(f"download {url}")
-    if github_mirror:
-        url = url.replace("github.com", github_mirror)
+    if github_mirror == 'fastgit':
+        url = url.replace("github.com", 'download.fastgit.org')
 
     proxy = G_CONFIG.get_value("proxy")
     res = requests.get(url, stream=True, headers={'Accept-Encoding': None}, proxies=proxy)

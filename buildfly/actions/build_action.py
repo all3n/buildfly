@@ -55,8 +55,8 @@ class BuildAction(BaseAction):
         parser.add_argument('target', metavar='target', type=str, nargs="?",
                             help="build target")
 
-    def run(self):
-        cur_dir = os.path.abspath(sys.path[0])
+    def run(self, code_dir = None):
+        cur_dir = os.path.abspath(sys.path[0]) if code_dir is None else code_dir
         buildfly_script = os.path.join(cur_dir, CONF_SCRIPT)
         if os.path.exists(buildfly_script):
             with BuildFlyAPI(self):
