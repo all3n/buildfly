@@ -25,7 +25,6 @@ LIBC_VERSION_PATTERN = re.compile("libc-([\d\.]+)\.so")
 
 class BuildFlyEnv(object):
     def __init__(self):
-        self.libc_version = None
         # x86_64
         self.machine = platform.machine()
         # only work in mac
@@ -36,8 +35,7 @@ class BuildFlyEnv(object):
         self.cpu_count = platform.os.cpu_count()
         # Linux
         self.system = platform.system().lower()
-
-        self.detect()
+        self.detect_flag = False
 
     def is_windows(self):
         return self.system == "windows"
@@ -48,7 +46,18 @@ class BuildFlyEnv(object):
     def is_macos(self):
         return self.system == "darwin"
 
+    # not found attr
+    def __getattr__(self, item):
+        if item == "cmake_version":
+            self.detect_cmake()
+        elif item == "libc_version":
+            self.check_glibc()
+        elif item == "gcc_version" or item == "clang_version":
+            self.detect_compiler()
+        return super(BuildFlyEnv, self).__getattribute__(item)
+
     def check_glibc(self):
+        self.libc_version = None
         if self.is_linux():
             libc_so_file = exec_cmd("readlink -f `ldconfig -p|grep libc.so.6|head -n 1|awk -F\"=> \" '{print $2}'`")
             version_match = LIBC_VERSION_PATTERN.search(libc_so_file)
@@ -60,37 +69,35 @@ class BuildFlyEnv(object):
                 self.libc_version = semver.VersionInfo(*libc_vers)
                 logger.info("libc version:%s" % self.libc_version)
 
-
     def detect_compiler(self):
+        self.gcc_version = None
+        self.clang_version = None
         if self.is_macos():
             clang_v = exec_cmd("clang -v 2>&1|grep version")
             if clang_v:
                 self.clang_version = clang_v.split(" ")[3]
-            else:
-                self.clang_version = None
             logger.info("clang version %s" % self.clang_version)
         elif self.is_linux():
             gcc_v = exec_cmd("gcc -v 2>&1|grep 'gcc version'")
             if gcc_v:
                 self.gcc_version = gcc_v.split(" ")[2]
-            else:
-                self.gcc_version = None
             logger.info("gcc version %s" % self.gcc_version)
 
     def detect_cmake(self):
         logger.info("detect cmake")
+        self.cmake_version = None
         if self.is_linux() or self.is_macos():
             cmake_v = exec_cmd("cmake --version 2>&1|grep 'cmake version'")
             if cmake_v:
                 self.cmake_version = cmake_v.split(" ")[2]
-            else:
-                self.cmake_version = None
             logger.info("cmake version %s" % self.cmake_version)
 
     def detect(self):
-        self.check_glibc()
-        self.detect_compiler()
-        self.detect_cmake()
+        if not self.detect_flag:
+            self.check_glibc()
+            self.detect_compiler()
+            self.detect_cmake()
+            self.detect_flag = True
 
 
 BENV = BuildFlyEnv()
