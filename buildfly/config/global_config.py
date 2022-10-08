@@ -49,7 +49,7 @@ class GlobalConfig(object):
         if not entire and type(value) == dict:
             print("partial update %s" % name)
             if last_field in fv:
-                fv[last_field].update(value)
+                fv[last_field].update_repo(value)
             else:
                 fv[last_field] = value
         else:
