@@ -37,15 +37,24 @@ class RepoCacheDb(object):
         self.c.close()
 
     def get_pkg(self, name, repo = None):
-        pkgs = self.c.execute("SELECT * FROM `pkgs` WHERE `name` = ?", (name,))
+        pkgs = self.c.execute("""
+        SELECT r.path, r.name rname, p.name pname, r.path rpath, p.path path,p.ts ts FROM `pkgs` p INNER JOIN `repos` r ON p.repo = r.name  WHERE p.`name` = ?
+        """, (name,))
         pres = pkgs.fetchall()
         if pres is None:
             return None
         else:
+            mf = None
             res = pres[0]
             if len(pres) > 1:
                 logger.info("%d found,choose %s", len(pres), res)
-            print(res)
+            mf_json = os.path.join(res["rpath"], res['path'], 'manifest.json')
+            if os.path.exists(mf_json):
+                with open(mf_json, "r") as f:
+                    mf = json.loads(f.read())
+            return mf
+
+
 
 
 

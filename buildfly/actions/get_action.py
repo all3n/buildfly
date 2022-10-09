@@ -30,27 +30,30 @@ class GetAction(BaseAction):
     def run(self):
         pkg = self.args.pkg
         args, kwargs = self.split_args()
+        group = None
+        version = None
         if '@' in pkg:
-            group,version = pkg.split("@")
+            artifact, version = pkg.split("@")
         elif 'version' in kwargs:
-            group = pkg
             version = kwargs["version"]
-        name = os.path.basename(group)
+        if '/' in artifact:
+            group, name = artifact.split('/')[-2:]
+        else:
+            name = artifact
+        # name = os.path.basename(group)
+        print(group, name)
+        print(args)
+        show_versions = False
+        if len(args) > 0 and args[0].lower() in ['vers', 'versions', 'ver', 'v']:
+            show_versions = True
 
-        # names = os.path.basename(pkg).split("@")
-        # name = names[0]
-        # version = None
-        # if len(names) > 1:
-        #     version = names[1]
-        # elif "version" in kwargs:
-        #     version = kwargs["version"]
+        bpkg = DEP_MGR.parse_pkg(name, group, version)
+        if show_versions:
+            vers = DEP_MGR.list_versions(bpkg)
+            logger.info("%s", vers)
+            return
 
-        # if name in repo_list:
-        #     pkg = repo_list.get(name)
-            # if version:
-            #     pkg = pkg + "@" + version
-        # logger.info("%s %s", name, pkg)
+        DEP_MGR.download_pkg(bpkg)
 
-        pkg_meta = DEP_MGR.parse_pkg(name, group, version)
         # app_dep = BuildDependency(name, pkg)
         # get_dep(app_dep)

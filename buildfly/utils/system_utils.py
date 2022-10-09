@@ -25,8 +25,12 @@ def exec_cmd(cmd):
     return data
 
 
-def get_bfly_path(d):
-    return os.path.expanduser("~/.buildfly/%s" % d)
+def get_bfly_path(d, create = False):
+    bpath = os.path.expanduser("~/.buildfly/%s" % d)
+    if create and not os.path.exists(bpath):
+        os.makedirs(bpath)
+    return bpath
+
 
 
 def parse_glob_files(f):

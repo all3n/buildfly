@@ -16,6 +16,7 @@ import requests
 from buildfly.config.global_config import G_CONFIG
 from buildfly.utils.compress_utils import *
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -60,10 +61,11 @@ def download_http_pkg(url, tmp_pkg_file):
     github_mirror = G_CONFIG.get_value("github.mirror")
 
     logger.info(f"download {url}")
-    if github_mirror == 'fastgit':
-        url = url.replace("github.com", 'download.fastgit.org')
+    # # if github_mirror == 'fastgit':
+    #     url = url.replace("github.com", 'download.fastgit.org')
 
     proxy = G_CONFIG.get_value("proxy")
+
     res = requests.get(url, stream=True, headers={'Accept-Encoding': None}, proxies=proxy)
     try:
         # 'Transfer-Encoding': 'chunked' chunked 类型 没有content-length
@@ -80,10 +82,12 @@ def download_http_pkg(url, tmp_pkg_file):
                 show_progress(write_data_size, content_length, fmt="DOWNLOAD:%s {SPEED}" % (url))
                 tpf.write(chunk)
             print("%s download finished" % (url))
+            return True
 
 
     except Exception as exc:
         print(exc)
+        return False
 
 
 if __name__ == '__main__':
