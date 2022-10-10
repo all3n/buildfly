@@ -20,7 +20,9 @@ from buildfly.config.global_config import G_CONFIG
 import glob
 import logging
 
-logger = logging.getLogger(__name__)
+from buildfly.utils.log_utils import get_logger
+
+logger = get_logger(__name__)
 
 
 class CmakeBuild(BasicBuild):
@@ -37,7 +39,7 @@ class CmakeBuild(BasicBuild):
                 use_ctime = True
         return use_ctime
 
-    def gen_build_script(self, code_dir, install_dir_path):
+    def gen_build_script(self, code_dir, install_dir_path, build_mode):
         build_script = os.path.join(code_dir, "bfly_build_script.sh")
 
         with open(build_script, "w") as bf:
@@ -50,16 +52,34 @@ class CmakeBuild(BasicBuild):
                     bf.write("export CFLAGS=-lrt\n")
                     bf.write("export CXXFLAGS=-lrt\n")
 
+            if 'envs' in self.params:
+                envs = self.params['envs']
+                for name, v in envs.items():
+                    bf.write(f"export {name}={v}\n")
+            cmake_parmas = []
+            if 'cmake' in self.params:
+                pcmake = self.params['cmake']
+                if 'variable' in pcmake:
+                    cmake_vars = pcmake['variable']
+                    for name, v in cmake_vars.items():
+                        cmake_parmas.append(f"-D{name}={v}")
+
             bf.write(f"rm -rf {self.build_dir}\n")
             bf.write(f"mkdir -p {self.build_dir}\n")
             bf.write(f"cd {self.build_dir}\n")
-            bf.write(f"cmake -D CMAKE_INSTALL_PREFIX={install_dir_path} ..\n")
+
+            cmake_parmas_str = " ".join(cmake_parmas)
+
+            cmake_cmd = f"cmake -D CMAKE_INSTALL_PREFIX={install_dir_path} -D CMAKE_BUILD_TYPE={build_mode} {cmake_parmas_str} .."
+            logger.info(f"{cmake_cmd}")
+            bf.write(f"{cmake_cmd}\n")
+            bf.write(f"make clean\n")
             bf.write(f"make -j{self.nproc}\n")
             bf.write(f"make install\n")
         return build_script
 
-    def build(self, app_dep, code_dir, install_dir_path):
+    def build(self, bpkg, code_dir, install_dir_path, build_mode):
         print("cmake %s" % code_dir)
-        build_script = self.gen_build_script(code_dir, install_dir_path)
+        build_script = self.gen_build_script(code_dir, install_dir_path, build_mode)
         CMD = f"cd {code_dir};bash {build_script}"
         os.system(CMD)

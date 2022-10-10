@@ -77,7 +77,6 @@ class BuildAction(BaseAction):
                     if self.on_after_build:
                         logger.info("after build")
                         self.on_after_build()
-
         else:
             logger.error(f"{CONF_SCRIPT} not found")
 

@@ -54,6 +54,8 @@ class BuildFlyEnv(object):
             self.check_glibc()
         elif item == "gcc_version" or item == "clang_version":
             self.detect_compiler()
+        elif item == "libstdcxx_version":
+            self.libstdcxx_version = self.get_stdcxx_version()
         return super(BuildFlyEnv, self).__getattribute__(item)
 
     def check_glibc(self):
@@ -68,6 +70,14 @@ class BuildFlyEnv(object):
                     libc_vers.append(0)
                 self.libc_version = semver.VersionInfo(*libc_vers)
                 logger.info("libc version:%s" % self.libc_version)
+
+    def get_stdcxx_version(self):
+        if self.is_linux():
+            std_v = exec_cmd(
+                "readlink $(ldconfig -p | grep libstdc++ | head -n 1 | awk -F'=>' '{print $2}') | sed -e's#libstdc++.so.##g'")
+            return std_v
+        else:
+            return None
 
     def detect_compiler(self):
         self.gcc_version = None

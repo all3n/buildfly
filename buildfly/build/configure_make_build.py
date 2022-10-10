@@ -15,7 +15,7 @@ from buildfly.build.basic_build import BasicBuild
 
 
 class ConfigureMakeBuild(BasicBuild):
-    def build(self, app_dep, code_dir, install_dir_path):
+    def build(self, bpkg, code_dir, install_dir_path, build_mode):
         print("configure_make %s" % code_dir)
         CMD = f"cd %s;{self.gcc_env} ./configure --prefix=%s; make; make install" % (code_dir, install_dir_path)
         print(CMD)

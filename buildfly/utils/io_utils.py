@@ -10,9 +10,13 @@
 
 """
 import os
+import json
 
 
 def write_to_file(filepath, line):
+    if type(line) == dict:
+        line = json.dumps(line)
+
     with open(filepath, "w") as f:
         if type(line) == str:
             f.write(line + "\n")

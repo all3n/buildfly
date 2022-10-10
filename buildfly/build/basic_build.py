@@ -13,8 +13,10 @@ from buildfly.config.global_config import G_CONFIG
 
 
 class BasicBuild(object):
-    def __init__(self):
+    def __init__(self, params = None):
+        self.params = params
         self.gcc_home = G_CONFIG.get_value("gcc.home")
         self.gcc_env = f"CC={self.gcc_home}/bin/gcc CXX={self.gcc_home}/bin/g++"
-    def build(self, app_dep, code_dir, install_dir_path):
+
+    def build(self, bpkg, code_dir, install_dir_path, build_mode):
         pass
