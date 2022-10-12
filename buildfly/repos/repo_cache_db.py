@@ -7,6 +7,11 @@ from buildfly.repos.common import BFlyPkg
 from buildfly.utils.log_utils import get_logger
 from buildfly.utils.system_utils import get_bfly_path
 from buildfly.config.global_config import G_CONFIG
+# from sqlalchemy import create_engine
+# from buildfly.repos.orm import Base, Pkgs
+from sqlalchemy.orm import Session
+
+from buildfly.config.repo_list import repo_list
 
 logger = get_logger(__name__)
 repo_db_path = get_bfly_path("repo.db")
@@ -16,7 +21,7 @@ def init_repo_db():
     repo_db.execute("CREATE TABLE repos(name text, path text, desc text, ts timestamp)")
     repo_db.execute("CREATE TABLE pkgs(repo text, name text, desc text, path text, ts timestamp)")
     repo_db.execute(
-        "CREATE TABLE artifacts(pkg text, ver_id text, build_params text, hash text, os text, arch text, ts timestamp)")
+        "CREATE TABLE artifacts(pkg text, ver_id text, build_params text, param_hash text, hash text, os text, arch text, ts timestamp)")
 
 
 def dict_factory(cursor, row):
@@ -45,8 +50,18 @@ class RepoCacheDb(object):
         SELECT r.path, r.name rname, p.name pname, r.path rpath, p.path path,p.ts ts FROM `pkgs` p INNER JOIN `repos` r ON p.repo = r.name  WHERE p.`name` = ?
         """, (name,))
         pres = pkgs.fetchall()
-        if pres is None:
-            return None
+        if not pres:
+            gpath = repo_list.get(name)
+            if gpath:
+                meta = {
+                    'name': name,
+                    'url' : f'https://github.com/{gpath}',
+                    'params': {}
+                }
+            else:
+                raise Exception(f"{name} is valid")
+
+            return meta
         else:
             mf = None
             res = pres[0]
@@ -59,11 +74,11 @@ class RepoCacheDb(object):
             return mf
 
     def add_pkg(self, bpkg: BFlyPkg):
-        params_str = json.dumps(bpkg.params)
-        self.db.execute(f"INSERT INTO `artifacts`(pkg, ver_id, build_params, hash, os, arch, ts) VALUES(?, ?, ?, ?, ?)",
-                        (bpkg.name, bpkg.version, params_str, bpkg.commit_sha, bpkg.os, bpkg.arch,
+        params_str = json.dumps(bpkg.meta['params'])
+        self.db.execute(f"INSERT INTO `artifacts`(pkg, ver_id, build_params, param_hash, hash, os, arch, ts) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                        (bpkg.name, bpkg.version, params_str, bpkg.param_hash, bpkg.commit_sha, bpkg.os, bpkg.arch,
                          datetime.datetime.now()))
-        self.db.flush()
+        self.db.commit()
 
     def update_repo(self, repo, repo_dir, dirs):
         # c = self.db.cursor()

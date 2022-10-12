@@ -16,10 +16,10 @@ import sys
 
 import semver
 
+from buildfly.utils.log_utils import get_logger
 from buildfly.utils.system_utils import exec_cmd
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 LIBC_VERSION_PATTERN = re.compile("libc-([\d\.]+)\.so")
 
 

@@ -4,12 +4,14 @@
 # Description
 # Date 10/10/22 8:20 PM
 # Version 1.0
+import enum
+import json
 
 class BFlyPkg(object):
-    def __init__(self, name, group, version):
+    def __init__(self, name, group) :
         self.name = name
         self.group = group
-        self.version = version
+        self.version = None
         self.kwargs = {}
         self.commit_sha = None
 
@@ -25,7 +27,7 @@ class BFlyPkg(object):
         if self.version:
             p.append("v")
             p.append(self.version)
-        if self.commit_sha:
+        elif self.commit_sha:
             p.append('commit')
             p.append(self.commit_sha)
         return "/".join(p)

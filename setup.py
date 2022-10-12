@@ -53,7 +53,8 @@ setup(name='buildfly',
           "pyyaml",
           "colorama",
           "requests",
-          "semver"
+          "semver",
+          "sqlalchemy"
       ],
       entry_points={
           'console_scripts': [

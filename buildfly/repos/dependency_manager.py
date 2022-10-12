@@ -31,7 +31,6 @@ from buildfly.repos.common import BFlyPkg
 logger = get_logger(__name__)
 
 
-
 class DependencyPlugin(object):
     def __init__(self):
         self.build_manager = BuildManager()
@@ -56,27 +55,31 @@ class DependencyPlugin(object):
         else:
             raise Exception("unsupport build type")
 
-    def build_pkg(self, build_action: BuildAction, bpkg: BFlyPkg, build_force = False, build_mode = "Release"):
-        logger.info(f"{bpkg}")
+    def build_pkg(self, build_action: BuildAction, bpkg: BFlyPkg, build_force=False, build_mode="Release"):
+        # logger.info(f"{bpkg}")
         commit_sha = bpkg.ver_info['commit_sha']
         code_dir = get_bfly_path(f"repo/{bpkg.path()}")
         params_md5 = hashlib.md5(json.dumps(bpkg.meta['params']).encode("utf-8")).hexdigest()
-        install_dir = get_bfly_path(f"install/{bpkg.path()}/{params_md5}/{build_mode}")
-        build_done = os.path.join(install_dir, 'metadata')
+        bpkg.param_hash = params_md5
+        artifact_path = f"{bpkg.path()}/{params_md5}/{build_mode}"
+        install_dir = get_bfly_path(f"install/{artifact_path}")
+        pkg_metadata = os.path.join(install_dir, 'metadata')
 
         if not os.path.exists(code_dir):
             logger.error(f"{code_dir} not exists")
             return
-        if build_force or not os.path.exists(build_done):
+        bpkg.artifact_path = artifact_path
+        if build_force or not os.path.exists(pkg_metadata):
             build_type = self.detact_build_type(code_dir)
             build_class = build_type + "_build"
             build_module = importlib.import_module("buildfly.build." + build_class)
             build_obj = getattr(build_module, camelize(build_class))(bpkg.meta['params'])
             build_obj.build(bpkg, code_dir, install_dir, build_mode)
-            write_to_file(build_done, bpkg.__dict__)
+            write_to_file(pkg_metadata, bpkg.__dict__)
             repo_cache.add_pkg(bpkg)
         else:
-            logger.info(f"{build_done} exist,skip")
+            logger.info(f"{artifact_path}/metadata exist,skip")
+        return bpkg
 
 
 class GithubPlugin(DependencyPlugin):
@@ -101,8 +104,6 @@ class GithubPlugin(DependencyPlugin):
             kwargs = bpkg.kwargs
             branch = kwargs.get('branch', 'master')
             branch_info = self.api_client.get_branch_info(group, bpkg.name, branch)
-            print(json.dumps(branch_info, indent=2))
-
             commit_sha = branch_info['commit']['sha']
             bpkg.commit_sha = commit_sha
             commit_tar_url = f'https://github.com/{group}/{bpkg.name}/archive/{commit_sha}.tar.gz'
@@ -121,11 +122,10 @@ class GithubPlugin(DependencyPlugin):
         return tags
 
     def download_pkg(self, bpkg: BFlyPkg):
-        logger.info("%s", bpkg)
-        tarball_url = bpkg.ver_info['tarball_url']
-        commit_sha = bpkg.ver_info['commit_sha']
-        print(tarball_url)
-
+        if bpkg.version is None and bpkg.commit_sha is None:
+            bpkg.ver_info = self.tags_info(bpkg)
+            bpkg.commit_sha = bpkg.ver_info['commit_sha']
+        commit_sha = bpkg.commit_sha
         cache_dir = get_bfly_path(f"cache/{bpkg.path()}", True)
         code_dir = get_bfly_path(f"repo/{bpkg.path()}", True)
         # download
@@ -134,6 +134,9 @@ class GithubPlugin(DependencyPlugin):
         if os.path.exists(sha_file):
             logger.info(f"{bpkg.path()} tar exist,skip download")
         else:
+            if not hasattr(bpkg, 'ver_info'):
+                bpkg.ver_info = self.tags_info(bpkg)
+            tarball_url = bpkg.ver_info['tarball_url']
             if download_http_pkg(tarball_url, tmp_pkg_file):
                 write_to_file(sha_file, commit_sha)
 
@@ -164,13 +167,14 @@ class DependencyMananger(object):
         elif purl.startswith("http"):
             return "url"
 
-    def parse_pkg(self, name, group, version):
-        logger.info("%s %s %s", name, group, version)
-        bpkg = BFlyPkg(name, group, version)
+        # def parse_pkg(self, name, group, version):
+
+    def parse_pkg(self, bpkg):
+        # logger.info("%s %s %s", name, group, version)
+        name = bpkg.name
         bpkg.meta = repo_cache.get_pkg(name)
         bpkg.type = self.detect_type(bpkg)
         assert bpkg.type in self.plugins, f"plugin {bpkg.type} not support"
-        bpkg.ver_info = self.plugins[bpkg.type].tags_info(bpkg)
         bpkg.arch = BENV.machine
         bpkg.os = BENV.system
         bpkg.libc_version = str(BENV.libc_version)
@@ -184,7 +188,7 @@ class DependencyMananger(object):
     def download_pkg(self, bpkg: BFlyPkg):
         return self.plugins[bpkg.type].download_pkg(bpkg)
 
-    def build_pkg(self, bpkg: BFlyPkg, build_force = False, build_mode = "Release"):
+    def build_pkg(self, bpkg: BFlyPkg, build_force=False, build_mode="Release"):
         return self.plugins[bpkg.type].build_pkg(self.build_action, bpkg, build_force, build_mode)
         pass
 
