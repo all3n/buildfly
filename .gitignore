@@ -32,3 +32,5 @@ tests/.buildfly
 examples/*/build
 /release
 /tmp
+/logs
+.gow

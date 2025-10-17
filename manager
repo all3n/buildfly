@@ -48,7 +48,7 @@ buildfly 项目管理脚本
     lint            代码检查
     clean           清理构建文件
     install         安装依赖
-    dev             开发模式（监听文件变化）
+    dev             air开发模式（监听文件变化）
     docker          Docker 相关操作
     release         发布版本
     help            显示此帮助信息
@@ -297,23 +297,34 @@ install_deps() {
     print_success "依赖安装完成"
 }
 
-# 开发模式
+# 开发模式 watch 自动编译模式
 dev_mode() {
-    print_info "启动开发模式..."
-    air
-    #check_command fswatch || {
-    #    print_error "需要安装 fswatch: brew install fswatch"
-    #    exit 1
-    #}
-    #
-    ## 初始编译
-    #build_project
-    #
-    ## 监听文件变化
-    #fswatch -o -l 1.5 cmd go.mod go.sum internal pkg | while read num_events; do
-    #    print_info "检测${num_events}events 重新编译..."
-    #    build_project
-    #done
+    print_info "启动air开发模式..."
+
+    # 检查是否已有air进程在运行
+    if [ -f "logs/air.pid" ]; then
+        local air_pid=$(cat logs/air.pid)
+        if kill -0 $air_pid 2>/dev/null; then
+            print_info "发现正在运行的air进程(PID: $air_pid)，正在停止..."
+            kill $air_pid
+            sleep 2
+        else
+            print_info "PID文件存在但进程已不存在，清理旧的PID文件..."
+        fi
+        rm -f logs/air.pid
+    fi
+
+    # 确保logs目录存在
+    mkdir -p logs
+
+    # 启动air并保存PID
+    nohup air > logs/air.log 2>&1 &
+    local new_pid=$!
+
+    echo $new_pid > logs/air.pid
+    print_info "Air已启动，PID: $new_pid"
+    print_info "日志文件: logs/air.log"
+    print_info "PID文件: logs/air.pid"
 }
 
 # Docker 相关操作
@@ -387,8 +398,11 @@ release_version() {
 # 主函数
 main() {
     local command=$1
+    if [[ -z "$command" ]];then
+        show_help
+        exit 0
+    fi
     shift
-    
     case $command in
         build)
             build_project "$@"
