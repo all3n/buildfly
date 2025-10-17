@@ -1,0 +1,86 @@
+project:
+  name: "boost-example"
+  version: "1.0.0"
+  variables:
+    install_dir: ".buildfly/boost"
+    build_type: "Release"
+    cxx_compiler: "g++"
+    boost_libraries: "system,filesystem,program_options,regex"
+
+dependencies:
+  boost:
+    version: "1.75.0"
+    source: 
+      type: "archive"
+      url: "https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz"
+      hash: "sha256:953db31e016db7bb207f11432bef7df100516eeb722843c20331616e978d8d25"
+    build_system: "custom"
+    custom_script: |
+      #!/bin/bash
+      set -e
+      
+      echo "Building Boost ${BOOST_VERSION} with custom configuration..."
+      
+      # 进入源代码目录
+      cd ${SOURCE_DIR}
+      
+      # Bootstrap Boost
+      echo "Bootstrapping Boost..."
+      ./bootstrap.sh \
+        --prefix=${INSTALL_DIR} \
+        --with-toolset=gcc
+      
+      # 创建用户配置文件
+      cat > user-config.jam << EOF
+      using gcc : : ${CXX_COMPILER} : <cxxflags>"${CXX_FLAGS}" ;
+      EOF
+      
+      # 构建指定的库
+      echo "Building Boost libraries: ${BOOST_LIBRARIES}"
+      ./b2 install \
+        --prefix=${INSTALL_DIR} \
+        --build-dir=${BUILD_DIR} \
+        toolset=gcc \
+        variant=${BUILD_TYPE} \
+        link=static,shared \
+        threading=multi \
+        runtime-link=shared \
+        --with-$(echo ${BOOST_LIBRARIES} | sed 's/,/ --with-/g') \
+        -j${CPU_CORES} \
+        --user-config=user-config.jam
+      
+      echo "Boost installation completed successfully!"
+      echo "Installed libraries: ${BOOST_LIBRARIES}"
+      echo "Install directory: ${INSTALL_DIR}"
+      
+      # 验证安装
+      if [ -d "${INSTALL_DIR}/lib" ] && [ -d "${INSTALL_DIR}/include" ]; then
+        echo "✓ Installation verified"
+        ls -la ${INSTALL_DIR}/lib/ | grep -E "\.(a|so)$" || echo "No libraries found"
+        ls -la ${INSTALL_DIR}/include/boost/ | head -10
+      else
+        echo "✗ Installation verification failed"
+        exit 1
+      fi
+    env_variables:
+      BOOST_VERSION: "1.75.0"
+      BOOST_LIBRARIES: "${boost_libraries}"
+
+build_profiles:
+  minimal:
+    variables:
+      boost_libraries: "system,filesystem"
+    dependencies:
+      - "boost"
+
+  full:
+    variables:
+      boost_libraries: "system,filesystem,program_options,regex,test,thread,chrono,date_time,atomic"
+    dependencies:
+      - "boost"
+
+  headers-only:
+    variables:
+      boost_libraries: ""
+    dependencies:
+      - "boost"

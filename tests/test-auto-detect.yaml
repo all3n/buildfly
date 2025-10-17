@@ -1,0 +1,11 @@
+project:
+  name: "auto-detect-test"
+  version: "1.0.0"
+  
+dependencies:
+  test-lib:
+    version: "1.0.0"
+    source:
+      type: "archive"
+      url: "https://example.com/test-lib.tar.gz"
+    build_system: "cmake"

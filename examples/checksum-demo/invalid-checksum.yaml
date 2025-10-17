@@ -1,0 +1,13 @@
+project:
+  name: "checksum-test-invalid"
+  version: "1.0.0"
+
+dependencies:
+  # 使用错误的校验和来测试验证失败
+  test-invalid:
+    version: "1.0.0"
+    source:
+      type: "archive"
+      url: "https://sourceforge.net/projects/freeimage/files/source/FreeImage/3.18.0/FreeImage3180.zip/download"
+      md5: "invalid-md5-hash-that-will-fail"
+    build_system: "cmake"

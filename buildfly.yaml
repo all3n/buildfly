@@ -1,0 +1,39 @@
+project:
+  name: "buildfly"
+  version: "1.0.0"
+
+# 代理配置示例
+proxy:
+  http: "http://127.0.0.1:7897"
+  https: "http://127.0.0.1:7897"
+  no_proxy:
+    - "localhost"
+    - "127.0.0.1"
+    - "*.local"
+
+dependencies:
+    boost:
+      version: "1.89.0"
+      source:
+        type: "archive"
+        urls:
+          - "https://archives.boost.io/release/1.89.0/source/boost_1_89_0.tar.gz"
+        md5: "187b577ce9f485314fcf17bcba2fb542"
+      build_system: "custom"
+      custom_script: |
+        set -x
+        pwd
+        bash ./bootstrap.sh --prefix={{.InstallDir}}
+        ./b2 install
+    absl:
+      version: 20250814.1
+      source:
+        type: "archive"
+        urls:
+          - "https://github.com/abseil/abseil-cpp/releases/download/20250814.1/abseil-cpp-20250814.1.tar.gz"
+      build_system: cmake
+
+
+build_profiles:
+  default:
+    dependencies: []

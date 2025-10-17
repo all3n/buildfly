@@ -1,0 +1,47 @@
+project:
+  name: "proxy-demo"
+  version: "1.0.0"
+
+# 代理配置示例
+# 支持多种代理配置方式
+proxy:
+  # HTTP 代理服务器
+  http: "http://proxy.company.com:8080"
+  
+  # HTTPS 代理服务器
+  https: "https://proxy.company.com:8080"
+  
+  # 不使用代理的域名列表
+  no_proxy:
+    - "localhost"
+    - "127.0.0.1"
+    - "*.local"
+    - "*.internal"
+    - "github.com"  # 如果 GitHub 访问正常，可以不走代理
+
+dependencies:
+  # 示例：从 GitHub 下载的依赖
+  fmt:
+    version: "8.0.1"
+    source:
+      type: "git"
+      urls:
+        - "https://github.com/fmtlib/fmt.git"
+      tag: "8.0.1"
+    build_system: "cmake"
+    
+  # 示例：从官方源下载的依赖
+  zlib:
+    version: "1.2.11"
+    source:
+      type: "archive"
+      urls:
+        - "https://zlib.net/zlib-1.2.11.tar.gz"
+      sha256: "c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1"
+    build_system: "configure"
+
+build_profiles:
+  default:
+    dependencies:
+      - "fmt"
+      - "zlib"

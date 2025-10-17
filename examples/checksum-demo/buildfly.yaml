@@ -1,0 +1,68 @@
+project:
+  name: "checksum-demo"
+  version: "1.0.0"
+  variables:
+    install_dir: "${HOME}/.cppdeps"
+    build_type: "Release"
+
+dependencies:
+  # 使用 MD5 校验和
+  zlib-md5:
+    version: "1.2.11"
+    source:
+      type: "archive"
+      url: "https://zlib.net/zlib-1.2.11.tar.gz"
+      md5: "1c9f418cd4baa9c3d7a0ea8fda56af76"
+    build_system: "none"
+  
+  # 使用 SHA256 校验和
+  fmt-sha256:
+    version: "8.0.1"
+    source:
+      type: "archive"
+      url: "https://github.com/fmtlib/fmt/archive/8.0.1.tar.gz"
+      sha256: "3d5d4144db202c8929a21983c710bf7b9f83e6bb8e1a1f53d3be9c1c9d5d78c4"
+    build_system: "cmake"
+  
+  # 使用 SHA512 校验和
+  nlohmann-sha512:
+    version: "3.9.1"
+    source:
+      type: "archive"
+      url: "https://github.com/nlohmann/json/archive/v3.9.1.tar.gz"
+      sha512: "8b8e8e1c2e4c5f6e7a8b9c0d1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6"
+    build_system: "none"
+  
+  # 使用通用校验和映射
+  catch2-checksums:
+    version: "2.13.7"
+    source:
+      type: "archive"
+      url: "https://github.com/catchorg/Catch2/archive/v2.13.7.tar.gz"
+      checksums:
+        sha256: "aa8b5c4381e78c9c8d88d7b8f8fa6d3c0b6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1"
+        md5: "bb8e8e8e1c2e4c5f6e7a8b9c0d1f2a3b"
+    build_system: "cmake"
+  
+  # 向后兼容：使用 hash 字段（默认为 SHA256）
+  spdlog-legacy:
+    version: "1.9.2"
+    source:
+      type: "archive"
+      url: "https://github.com/gabime/spdlog/archive/v1.9.2.tar.gz"
+      hash: "8d8c8a8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8"
+    build_system: "none"
+
+build_profiles:
+  basic:
+    dependencies:
+      - "zlib-md5"
+      - "fmt-sha256"
+  
+  advanced:
+    dependencies:
+      - "zlib-md5"
+      - "fmt-sha256"
+      - "nlohmann-sha512"
+      - "catch2-checksums"
+      - "spdlog-legacy"

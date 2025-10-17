@@ -1,0 +1,18 @@
+project:
+  name: "test-build-tag"
+  version: "1.0.0"
+  cache_dir: "./.buildfly/cache"
+  build_dir: "./.buildfly/build"
+  install_dir: "./.buildfly/install"
+
+dependencies:
+  test-lib:
+    version: "3.4.0"
+    source:
+      type: "archive"
+      urls:
+        - "https://github.com/catchorg/Catch2/archive/refs/tags/v3.4.0.tar.gz"
+      checksum:
+        algorithm: "md5"
+        value: "c0589798762d1a6c4c8e5495d5c7f023"
+    build_system: "none"  # 不需要构建，直接安装

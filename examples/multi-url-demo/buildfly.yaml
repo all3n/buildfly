@@ -1,0 +1,67 @@
+project:
+  name: "multi-url-demo"
+  version: "1.0.0"
+  variables:
+    build_type: "Release"
+    cxx_compiler: "g++"
+    cxx_flags: "-O2 -std=c++17"
+
+dependencies:
+  # 测试多 URL 的压缩包依赖
+  zlib:
+    version: "1.2.11"
+    source:
+      type: "archive"
+      urls:
+        - "/opt/local/archives/zlib-1.2.11.tar.gz"  # 本地文件（如果存在）
+        - "./third-party/zlib-1.2.11.tar.gz"       # 相对路径（如果存在）
+        - "https://zlib.net/zlib-1.2.11.tar.gz"     # 官方源
+        - "https://github.com/madler/zlib/releases/download/v1.2.11/zlib-1.2.11.tar.gz"  # GitHub 备用源
+      sha256: "c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1"
+    build_system: "configure"
+    configure_options:
+      - "--prefix=${INSTALL_DIR}"
+
+  # 测试多 URL 的 Git 依赖
+  fmt:
+    version: "8.0.1"
+    source:
+      type: "git"
+      urls:
+        - "git@github.com:fmtlib/fmt.git"           # SSH（如果密钥可用）
+        - "https://github.com/fmtlib/fmt.git"       # HTTPS
+        - "https://gitlab.com/libraries/fmt.git"    # GitLab 镜像（如果存在）
+      tag: "8.0.1"
+    build_system: "cmake"
+    cmake_options:
+      - "FMT_TEST=OFF"
+      - "FMT_DOC=OFF"
+      - "CMAKE_POSITION_INDEPENDENT_CODE=ON"
+
+  # 测试直接文件下载
+  catch2:
+    version: "2.13.7"
+    source:
+      type: "direct"
+      urls:
+        - "./third-party/catch.hpp"                 # 本地文件
+        - "https://github.com/catchorg/Catch2/releases/download/v2.13.7/catch.hpp"  # 网络文件
+    build_system: "none"  # 头文件库，不需要构建
+
+build_profiles:
+  linux-release:
+    variables:
+      build_type: "Release"
+      cxx_flags: "-O3 -DNDEBUG -std=c++17"
+    dependencies:
+      - "zlib"
+      - "fmt"
+      - "catch2"
+
+  windows-debug:
+    variables:
+      build_type: "Debug"
+      cxx_flags: "-g -O0 -std=c++17"
+    dependencies:
+      - "fmt"
+      - "catch2"

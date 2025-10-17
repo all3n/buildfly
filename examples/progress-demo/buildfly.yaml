@@ -1,0 +1,39 @@
+# 进度回调和代理演示配置
+project:
+  name: "progress-demo"
+  version: "1.0.0"
+  variables:
+    install_dir: "${HOME}/.cppdeps"
+    build_type: "Release"
+
+dependencies:
+  # 大文件下载演示（带进度）
+  boost:
+    version: "1.89.0"
+    source: 
+      type: "archive"
+      url: "https://archives.boost.io/release/1.89.0/source/boost_1_89_0.tar.gz"
+      sha256: "6e808e01ed7bc6e928f158511352e415c23f9339d8795e651b9e8e226e5486c5"
+    
+  # Git 仓库下载演示
+  fmt:
+    version: "10.2.1"
+    source:
+      type: "git"
+      url: "https://github.com/fmtlib/fmt.git"
+      tag: "10.2.1"
+
+  # 直接文件下载演示
+  zlib:
+    version: "1.3.1"
+    source:
+      type: "direct"
+      url: "https://zlib.net/zlib-1.3.1.tar.gz"
+      sha256: "9a93b2b7dfdac76ce66290e712c63ffcaef1b341dcaf6bb836c2f5b0660615e2"
+
+build_profiles:
+  default:
+    dependencies:
+      - "boost"
+      - "fmt"
+      - "zlib"

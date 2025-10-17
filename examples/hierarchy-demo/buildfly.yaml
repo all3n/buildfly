@@ -1,0 +1,73 @@
+# 本地项目配置
+# 这个配置会与全局配置合并，本地配置优先级更高
+
+project:
+  name: "hierarchy-demo-project"
+  version: "2.0.0"
+  variables:
+    # 覆盖全局变量
+    build_type: "Debug"
+    cxx_flags: "-g -O0 -std=c++20 -Wall -Wextra"
+    # 本地特有的变量
+    local_optimization: "O0"
+    local_debug_info: "full"
+    project_specific: "demo-value"
+
+dependencies:
+  # 本地特有的依赖项
+  fmt:
+    version: "10.0.0"
+    build_system: "cmake"
+    source:
+      type: "git"
+      url: "https://github.com/fmtlib/fmt.git"
+      tag: "10.0.0"
+    cmake_options:
+      - "FMT_TEST=OFF"
+      - "FMT_DOC=OFF"
+  
+  spdlog:
+    version: "1.12.0"
+    build_system: "cmake"
+    source:
+      type: "git"
+      url: "https://github.com/gabime/spdlog.git"
+      tag: "v1.12.0"
+  
+  # 覆盖全局依赖项的版本
+  zlib:
+    version: "1.3.0"
+    build_system: "cmake"
+    source:
+      type: "git"
+      url: "https://github.com/madler/zlib.git"
+      tag: "v1.3.0"
+    cmake_options:
+      - "ZLIB_BUILD_EXAMPLES=OFF"
+
+build_profiles:
+  # 本地特有的构建配置文件
+  testing:
+    variables:
+      build_type: "Debug"
+      cxx_flags: "-g -O0 -std=c++20 -DTESTING"
+      local_debug_info: "full"
+    dependencies:
+      - "fmt"
+      - "spdlog"
+      - "zlib"
+  
+  production:
+    variables:
+      build_type: "Release"
+      cxx_flags: "-O3 -DNDEBUG -std=c++20 -march=native"
+      local_optimization: "O3"
+    dependencies:
+      - "boost"
+      - "fmt"
+      - "zlib"
+
+# 本地目录配置（会覆盖全局配置）
+build_dir: "./build"
+install_dir: "./install"
+cache_dir: "./cache"

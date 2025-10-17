@@ -1,0 +1,49 @@
+project:
+  name: "venv-demo-with-external-index"
+  version: "1.0.0"
+  variables:
+    install_dir: ".buildfly"
+    build_type: "Release"
+
+# 外部index配置
+external_index:
+  enabled: true
+  urls:
+    - "https://raw.githubusercontent.com/all3n/buildfly-index/refs/heads/main/index.yaml"
+    - "https://example.com/backup-index.yaml"
+  timeout: "30s"
+  update_interval: "24h"
+  cache_dir: ".buildfly/index-cache"
+
+venv:
+  enabled: true
+  uv_version: "latest"
+  auto_activate: false
+  root_dir: ".buildfly/root"
+  cpp_tools:
+    cmake:
+      version: "3.28.0"
+      enabled: true
+    ninja:
+      version: "1.11.1"
+      enabled: true
+  python:
+    version: "3.11"
+    packages: ["cmake", "ninja"]
+
+dependencies:
+  # 使用外部index中的依赖
+  fmt:
+    version: "10.2.1"
+    source:
+      type: "external_index"
+      index_name: "main"
+    build_system: "cmake"
+    cmake_options:
+      - "FMT_TEST=OFF"
+      - "CMAKE_POSITION_INDEPENDENT_CODE=ON"
+
+build_profiles:
+  default:
+    dependencies:
+      - "fmt"

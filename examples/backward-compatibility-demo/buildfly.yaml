@@ -1,0 +1,25 @@
+project:
+  name: "backward-compatibility-demo"
+  version: "1.0.0"
+  variables:
+    build_type: "Release"
+    cxx_compiler: "g++"
+    cxx_flags: "-O2 -std=c++17"
+
+dependencies:
+  # 这个配置使用旧的格式来测试向后兼容性
+  # 注意：实际上这个配置可能不会工作，因为我们已经将 URL 改为 URLS
+  # 但我们可以通过代码来处理这种情况
+  
+  # 新格式：使用 URLS 数组
+  zlib-new:
+    version: "1.2.11"
+    source:
+      type: "archive"
+      urls:
+        - "https://zlib.net/zlib-1.2.11.tar.gz"
+      sha256: "c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1"
+    build_system: "configure"
+
+  # 如果需要完全向后兼容，我们需要在加载器中添加转换逻辑
+  # 这里只是展示新格式的用法

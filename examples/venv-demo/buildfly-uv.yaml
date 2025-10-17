@@ -1,0 +1,81 @@
+project:
+  name: "venv-demo"
+  version: "1.0.0"
+  variables:
+    install_dir: ".buildfly"
+    build_type: "Release"
+
+# C++ 虚拟环境配置
+venv:
+  enabled: true
+  backend: "uv"  # 明确指定使用 UV
+  uv_version: "latest"
+  root_dir: ".buildfly/root"
+  auto_activate: true
+  
+  # UV 配置
+  uv:
+    # 主包索引
+    index_url: "https://pypi.org/simple"
+    # 额外的包索引
+    extra_index_urls:
+      - "https://download.pytorch.org/whl/cpu"
+      - "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple"
+    # 环境变量
+    environment:
+      UV_CACHE_DIR: ".buildfly/uv_cache"
+      UV_HTTP_TIMEOUT: "30"
+  
+  # C++ 构建工具配置
+  cpp_tools:
+    cmake:
+      version: "3.28.0"
+      enabled: true
+    ninja:
+      version: "1.11.1"
+      enabled: true
+    gcc:
+      version: "11.4.0"
+      enabled: false  # 在 macOS 上禁用
+    clang:
+      version: "16.0.0"
+      enabled: true   # 在 macOS 上启用
+  
+  # Python 工具配置（用于构建脚本）
+  python:
+    version: "3.11"
+    packages:
+      - "cmake"
+      - "ninja"
+      - "conan"
+      - "meson"
+
+dependencies:
+  fmt:
+    version: "8.0.1"
+    source:
+      type: "git"
+      urls:
+        - "https://github.com/fmtlib/fmt.git"
+      tag: "8.0.1"
+    build_system: "cmake"
+    cmake_options:
+      - "FMT_TEST=OFF"
+      - "CMAKE_POSITION_INDEPENDENT_CODE=ON"
+
+build_profiles:
+  default:
+    dependencies:
+      - "fmt"
+  
+  debug:
+    variables:
+      build_type: "Debug"
+    dependencies:
+      - "fmt"
+  
+  release:
+    variables:
+      build_type: "Release"
+    dependencies:
+      - "fmt"

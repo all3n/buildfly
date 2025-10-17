@@ -1,0 +1,13 @@
+project:
+  name: "checksum-test"
+  version: "1.0.0"
+
+dependencies:
+  # 使用一个小的测试文件和正确的 MD5 校验和
+  test-file:
+    version: "1.0.0"
+    source:
+      type: "archive"
+      url: "https://github.com/google/googletest/archive/refs/tags/v1.12.1.tar.gz"
+      md5: "8195fe1501a800357524a3a1c75ac4b8"
+    build_system: "cmake"

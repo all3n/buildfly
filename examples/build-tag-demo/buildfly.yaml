@@ -1,0 +1,79 @@
+# Build Tag 演示配置文件
+project:
+  name: "build-tag-demo"
+  version: "1.0.0"
+  variables:
+    install_dir: "./install"
+    build_dir: "./build"
+    cache_dir: "./cache"
+
+# 全局构建标签配置
+build_tag:
+  arch: "x86_64"
+  platform: "linux"
+  runtime: "glibc_2.35"
+  compiler: "gcc_11"
+  std: "cpp17"
+  abi: "sysv"
+
+dependencies:
+  fmt:
+    version: "8.0.1"
+    source:
+      type: "git"
+      urls: ["https://github.com/fmtlib/fmt.git"]
+      tag: "8.0.1"
+    build_system: "cmake"
+    cmake_options:
+      - "FMT_TEST=OFF"
+      - "FMT_DOC=OFF"
+      - "CMAKE_POSITION_INDEPENDENT_CODE=ON"
+    build_commands:
+      configure: |
+        cmake -B ${BUILD_DIR} \
+          -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} \
+          -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+          ${CMAKE_OPTIONS}
+      build: "cmake --build ${BUILD_DIR} --config ${BUILD_TYPE} -j${CPU_CORES}"
+      install: "cmake --install ${BUILD_DIR} --config ${BUILD_TYPE}"
+
+  zlib:
+    version: "1.2.11"
+    source:
+      type: "archive"
+      urls: ["https://zlib.net/zlib-1.2.11.tar.gz"]
+      sha256: "c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1"
+    build_system: "configure"
+    configure_options:
+      - "--prefix=${INSTALL_DIR}"
+      - "--shared"
+    build_commands:
+      configure: "./configure ${CONFIGURE_OPTIONS}"
+      build: "make -j${CPU_CORES}"
+      install: "make install"
+
+# 构建配置文件
+build_profiles:
+  debug:
+    variables:
+      build_type: "Debug"
+      cxx_flags: "-g -O0 -std=c++17"
+    dependencies:
+      - "fmt"
+      - "zlib"
+
+  release:
+    variables:
+      build_type: "Release"
+      cxx_flags: "-O3 -DNDEBUG -std=c++17"
+    dependencies:
+      - "fmt"
+      - "zlib"
+
+  cuda-enabled:
+    variables:
+      build_type: "Release"
+      cxx_flags: "-O3 -DNDEBUG -std=c++17"
+    dependencies:
+      - "fmt"
+      - "zlib"

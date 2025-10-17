@@ -1,0 +1,59 @@
+# 全局配置示例
+# 这个文件应该被复制到 ~/.config/buildfly/config.yaml
+
+project:
+  name: "global-default-project"
+  version: "1.0.0"
+  variables:
+    # 全局默认变量
+    build_type: "Release"
+    cxx_compiler: "g++"
+    cxx_flags: "-O2 -std=c++17"
+    install_dir: "${HOME}/.buildfly/install"
+    global_cache_dir: "${HOME}/.buildfly/cache"
+    # 全局特有的变量
+    global_optimization: "O3"
+    global_debug_symbols: "false"
+
+dependencies:
+  # 全局默认依赖项
+  boost:
+    version: "1.82.0"
+    build_system: "cmake"
+    source:
+      type: "git"
+      url: "https://github.com/boostorg/boost.git"
+      tag: "boost-1.82.0"
+    cmake_options:
+      - "BOOST_BUILD=ON"
+      - "CMAKE_POSITION_INDEPENDENT_CODE=ON"
+  
+  zlib:
+    version: "1.2.13"
+    build_system: "cmake"
+    source:
+      type: "git"
+      url: "https://github.com/madler/zlib.git"
+      tag: "v1.2.13"
+
+build_profiles:
+  # 全局构建配置文件
+  release:
+    variables:
+      build_type: "Release"
+      cxx_flags: "-O3 -DNDEBUG -std=c++17"
+    dependencies:
+      - "boost"
+      - "zlib"
+  
+  debug:
+    variables:
+      build_type: "Debug"
+      cxx_flags: "-g -O0 -std=c++17"
+      global_debug_symbols: "true"
+    dependencies:
+      - "boost"
+
+# 全局目录配置
+cache_dir: "${HOME}/.buildfly/cache"
+install_dir: "${HOME}/.buildfly/install"

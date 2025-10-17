@@ -1,0 +1,142 @@
+project:
+  name: "absl-example"
+  version: "1.0.0"
+  variables:
+    build_type: "Release"
+    cxx_standard: "17"
+    install_prefix: "/usr/local"
+
+# 全局构建标签配置
+build_tag:
+  arch: "arm64"
+  platform: "darwin"
+  runtime: "libcxx_15"
+  compiler: "clang_15"
+  std: "cpp17"
+  abi: "macho"
+
+dependencies:
+  absl:
+    # 依赖版本
+    version: "20250814.1"
+
+    # 依赖源码配置
+    source:
+      type: "archive"
+      urls:
+        - "https://github.com/abseil/abseil-cpp/releases/download/20250814.1/abseil-cpp-20250814.1.tar.gz"
+      sha256: "1692f77d1739bacf3f94337188b78583cf09bab7e420d2dc6c5605a4f86785a1"
+
+    # 构建系统配置
+    build_system: "cmake"
+
+    # 构建选项配置
+    cmake_options:
+      - "CMAKE_BUILD_TYPE=${BUILD_TYPE}"
+      - "CMAKE_INSTALL_PREFIX=${INSTALL_DIR}"
+      - "CMAKE_CXX_STANDARD=17"
+      - "CMAKE_CXX_STANDARD_REQUIRED=ON"
+      - "CMAKE_POSITION_INDEPENDENT_CODE=ON"
+      - "ABSL_ENABLE_INSTALL=ON"
+      - "ABSL_PROPAGATE_CXX_STD=ON"
+      - "BUILD_TESTING=OFF"
+      - "ABSL_BUILD_TESTING=OFF"
+      - "ABSL_BUILD_TEST_HELPERS=OFF"
+
+    # 自定义构建命令（使用标准化路径变量）
+    build_commands:
+      configure: |
+        cmake -S . -B ${BUILD_DIR} \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} \
+          -DCMAKE_CXX_STANDARD=17 \
+          -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+          -DABSL_ENABLE_INSTALL=ON \
+          -DABSL_PROPAGATE_CXX_STD=ON \
+          -DBUILD_TESTING=OFF \
+          -DABSL_BUILD_TESTING=OFF \
+          -DABSL_BUILD_TEST_HELPERS=OFF
+
+      build: |
+        cmake --build ${BUILD_DIR} --parallel
+
+      install: |
+        cmake --install ${BUILD_DIR}
+
+    # 环境变量配置
+    env_variables:
+      CXX: "clang++"
+      CXXFLAGS: "-O2 -DNDEBUG -std=c++17"
+      LDFLAGS: ""
+
+# 构建配置文件
+build_profiles:
+  # 开发配置
+  debug:
+    variables:
+      build_type: "Debug"
+      cxx_standard: "17"
+    dependencies:
+      - "absl"
+
+    # 构建标签覆盖
+    build_tag:
+      arch: "arm64"
+      platform: "darwin"
+      runtime: "libcxx_15"
+      compiler: "clang_15"
+      std: "cpp17"
+      abi: "macho"
+
+  # 发布配置
+  release:
+    variables:
+      build_type: "Release"
+      cxx_standard: "17"
+    dependencies:
+      - "absl"
+
+    # 构建标签覆盖
+    build_tag:
+      arch: "arm64"
+      platform: "darwin"
+      runtime: "libcxx_15"
+      compiler: "clang_15"
+      std: "cpp17"
+      abi: "macho"
+
+  # 最小配置（仅头文件）
+  header_only:
+    variables:
+      build_type: "Release"
+      cxx_standard: "17"
+    dependencies:
+      - "absl"
+
+    # 构建标签覆盖 - 可以不需要构建
+    build_tag:
+      arch: "x86_64"
+      platform: "linux"
+      runtime: "glibc_2.31"
+      compiler: "gcc_11"
+      std: "cpp17"
+      abi: "sysv"
+
+# 缓存配置
+cache:
+  # 下载缓存过期时间（7天）
+  download_expire: "168h"
+
+  # 构建缓存过期时间（30天）
+  build_expire: "720h"
+
+  # 最大缓存大小（2GB）
+  max_size: "2GB"
+
+# 目录配置
+directories:
+  buildfly_base_dir: ".buildfly"
+  build_dir: ".buildfly/build"
+  install_dir: ".buildfly/install"
+  cache_dir: "~/.buildfly/cache"

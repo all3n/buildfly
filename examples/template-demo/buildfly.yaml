@@ -1,0 +1,113 @@
+project:
+  name: "template-demo"
+  version: "1.0.0"
+  variables:
+    install_dir: "${HOME}/.buildfly/deps"
+    build_type: "Release"
+    cxx_compiler: "g++"
+    cxx_flags: "-O2 -std=c++17"
+
+dependencies:
+  # 使用 Go template 的自定义构建脚本示例
+  boost:
+    version: "1.89.0"
+    source: 
+      type: "archive"
+      url: "https://archives.boost.io/release/1.89.0/source/boost_1_89_0.tar.gz"
+    build_system: "custom"
+    custom_script: |
+      #!/bin/bash
+      set -e
+      
+      echo "Building {{.Dependency.Name}} version {{.Dependency.Version}}"
+      echo "Project: {{.ProjectName}} v{{.ProjectVersion}}"
+      echo "Build Type: {{.BuildType}}"
+      echo "CPU Cores: {{.CPUCount}}"
+      echo "OS: {{.OS}} ({{.Arch}})"
+      echo "Source Dir: {{.SourceDir}}"
+      echo "Build Dir: {{.BuildDir}}"
+      echo "Install Dir: {{.InstallDir}}"
+      
+      # 进入源码目录
+      cd {{.SourceDir}}
+      
+      # Bootstrap
+      ./bootstrap.sh \
+        --prefix={{.InstallDir}} \
+        --with-toolset={{if eq .OS "windows"}}msvc{{else}}{{.Variables.cxx_compiler}}{{end}}
+      
+      # 构建特定库
+      ./b2 install \
+        --prefix={{.InstallDir}} \
+        --build-dir={{.BuildDir}} \
+        toolset={{if eq .OS "windows"}}msvc{{else}}{{.Variables.cxx_compiler}}{{end}} \
+        variant={{.BuildType}} \
+        link=static,shared \
+        --with-system \
+        --with-filesystem \
+        --with-program_options \
+        -j{{.CPUCount}}
+      
+      echo "✓ {{.Dependency.Name}} installation completed"
+
+  # 另一个 template 示例
+  custom-lib:
+    version: "1.0.0"
+    source:
+      type: "git"
+      url: "https://github.com/example/custom-lib.git"
+      tag: "v1.0.0"
+    build_system: "custom"
+    custom_script: |
+      #!/bin/bash
+      set -e
+      
+      echo "=== Custom Build Script ==="
+      echo "Dependency: {{.Dependency.Name}}"
+      echo "Version: {{.Dependency.Version}}"
+      echo "Build System: {{.Dependency.BuildSystem}}"
+      
+      # 使用条件判断
+      {{if eq .OS "linux"}}
+      echo "Linux detected, using gcc"
+      export CC=gcc
+      export CXX=g++
+      {{else if eq .OS "darwin"}}
+      echo "macOS detected, using clang"
+      export CC=clang
+      export CXX=clang++
+      {{else}}
+      echo "Other OS: {{.OS}}"
+      {{end}}
+      
+      # 创建构建目录
+      mkdir -p {{.BuildDir}}
+      cd {{.BuildDir}}
+      
+      # 配置和构建
+      cmake {{.SourceDir}} \
+        -DCMAKE_INSTALL_PREFIX={{.InstallDir}} \
+        -DCMAKE_BUILD_TYPE={{.BuildType}} \
+        -DCMAKE_C_COMPILER=$CC \
+        -DCMAKE_CXX_COMPILER=$CXX
+      
+      make -j{{.CPUCount}}
+      make install
+      
+      echo "✓ Build completed successfully"
+
+build_profiles:
+  linux-release:
+    variables:
+      build_type: "Release"
+      cxx_flags: "-O3 -DNDEBUG -std=c++17"
+    dependencies:
+      - "boost"
+      - "custom-lib"
+
+  macos-debug:
+    variables:
+      build_type: "Debug"
+      cxx_flags: "-g -O0 -std=c++17"
+    dependencies:
+      - "custom-lib"
