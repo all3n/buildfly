@@ -20,12 +20,54 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
+GOW_LOG_DEFAULT="info"
+# 日志级别定义
+LOG_ERROR=1
+LOG_WARN=2
+LOG_INFO=3
+LOG_SUCCESS=4
+LOG_DEBUG=5
 
-info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-error() { echo -e "${RED}[ERROR]${NC} $1"; }
-success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
-debug() { echo -e "${CYAN}[DEBUG]${NC} $1"; }
+# 从环境变量获取日志级别，默认为 INFO 级别
+get_log_level() {
+    case "${GOW_LOG:-$GOW_LOG_DEFAULT}" in
+        "error") return $LOG_ERROR ;;
+        "warn") return $LOG_WARN ;;
+        "info") return $LOG_INFO ;;
+        "success") return $LOG_SUCCESS ;;
+        "debug") return $LOG_DEBUG ;;
+        *) return $LOG_INFO ;;
+    esac
+}
+
+# 检查是否应该记录日志
+should_log() {
+    local level=$1
+    get_log_level
+    local current_level=$?
+    [ $level -le $current_level ]
+}
+
+# 日志函数
+info() { 
+    should_log $LOG_INFO && echo -e "${BLUE}[INFO]${NC} $1" 
+}
+
+warn() { 
+    should_log $LOG_WARN && echo -e "${YELLOW}[WARN]${NC} $1" 
+}
+
+error() { 
+    should_log $LOG_ERROR && echo -e "${RED}[ERROR]${NC} $1" 
+}
+
+success() { 
+    should_log $LOG_SUCCESS && echo -e "${GREEN}[SUCCESS]${NC} $1" 
+}
+
+debug() { 
+    should_log $LOG_DEBUG && echo -e "${CYAN}[DEBUG]${NC} $1" 
+}
 
 # 显示帮助
 show_help() {
